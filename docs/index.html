@@ -3,26 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TraceGuard AI  -  Autonomous Quality Firewall for LLM Agents</title>
+  <title>TraceGuard AI - Autonomous Quality Firewall for LLM Agents</title>
   <meta name="description" content="TraceGuard AI detects, classifies, patches, and evaluates LLM agent failures automatically. Built on LangSmith, LangGraph, and Groq." />
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="TraceGuard AI  -  Autonomous Quality Firewall for LLM Agents" />
-  <meta property="og:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes  -  automatically. Built on LangGraph, Groq, and LangSmith." />
+  <meta property="og:title" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
+  <meta property="og:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes - automatically. Built on LangGraph, Groq, and LangSmith." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://saurabh-oss.github.io/traceguard-ai/" />
   <meta property="og:image" content="https://saurabh-oss.github.io/traceguard-ai/og.svg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="TraceGuard AI  -  Autonomous Quality Firewall for LLM Agents" />
+  <meta property="og:image:alt" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
 
   <!-- Twitter / X Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="TraceGuard AI  -  Autonomous Quality Firewall for LLM Agents" />
-  <meta name="twitter:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes  -  automatically." />
+  <meta name="twitter:title" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
+  <meta name="twitter:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes - automatically." />
   <meta name="twitter:image" content="https://saurabh-oss.github.io/traceguard-ai/og.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -215,7 +215,7 @@
       background: linear-gradient(90deg, var(--teal) 0%, var(--sky) 100%);
     }
     .pipeline-num {
-      font-size: 3rem; font-weight: 900; color: rgba(20,184,166,0.15);
+      font-size: 3rem; font-weight: 900; color: rgba(20,184,166,0.5);
       line-height: 1; margin-bottom: 1rem; font-variant-numeric: tabular-nums;
     }
     .pipeline-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
@@ -482,7 +482,7 @@
   </h1>
   <p class="hero-sub">
     TraceGuard AI watches your LangSmith traces, detects failures, generates a patch PR,
-    writes an evaluator, and scores the fix  -  all before your on-call engineer wakes up.
+    writes an evaluator, and scores the fix - all before your on-call engineer wakes up.
   </p>
   <div class="hero-buttons">
     <a class="btn-primary" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">
@@ -508,23 +508,23 @@
   <div class="container">
     <div class="section-label">⚠ The Problem</div>
     <h2 class="section-title">LLM agents fail silently and expensively</h2>
-    <p class="section-sub">Production AI agents hallucinate, loop, overflow context, and return empty responses  -  often without anyone noticing until a user complains.</p>
+    <p class="section-sub">Production AI agents hallucinate, loop, overflow context, and return empty responses - often without anyone noticing until a user complains.</p>
 
     <div class="problem-grid">
       <div class="problem-card">
         <div class="problem-icon">🔍</div>
         <h3>You can't watch every trace</h3>
-        <p>LangSmith gives you observability  -  but sifting through thousands of traces to find the failing ones, then understanding why, is a full-time job you don't have budget for.</p>
+        <p>LangSmith gives you observability - but sifting through thousands of traces to find the failing ones, then understanding why, is a full-time job you don't have budget for.</p>
       </div>
       <div class="problem-card">
         <div class="problem-icon">🌊</div>
         <h3>Failures compound silently</h3>
-        <p>An infinite loop bug in your agent doesn't crash the server  -  it just burns API credits and returns degraded answers. By the time you notice, you've racked up thousands of bad responses.</p>
+        <p>An infinite loop bug in your agent doesn't crash the server - it just burns API credits and returns degraded answers. By the time you notice, you've racked up thousands of bad responses.</p>
       </div>
       <div class="problem-card">
         <div class="problem-icon">⏱</div>
         <h3>Manual debugging is slow</h3>
-        <p>Reproducing LLM failures is hard. The trace is gone, the context window is stale, and writing a regression test requires understanding the failure type  -  work that takes hours, not minutes.</p>
+        <p>Reproducing LLM failures is hard. The trace is gone, the context window is stale, and writing a regression test requires understanding the failure type - work that takes hours, not minutes.</p>
       </div>
       <div class="problem-card">
         <div class="problem-icon">🤔</div>
@@ -553,12 +553,12 @@
           It polls for failed runs, classifies each failure against a 10-type taxonomy,
           dispatches a LangGraph agent to fetch your code and generate a targeted fix,
           auto-writes a regression evaluator, and scores the patch against the original
-          trace  -  all before you've had your first coffee.
+          trace - all before you've had your first coffee.
         </p>
         <p style="color:var(--muted);font-size:1rem;line-height:1.8;">
           A human remains in the loop for the final approval: every fix surfaces as a
-          GitHub PR with an explanation, diff, and shadow eval score. You click Approve  -  it merges.
-          You click Reject  -  it closes. No terminal required.
+          GitHub PR with an explanation, diff, and shadow eval score. You click Approve - it merges.
+          You click Reject - it closes. No terminal required.
         </p>
       </div>
       <div class="solution-steps">
@@ -592,7 +592,7 @@
   <div class="container">
     <div class="section-label">🏗 Architecture</div>
     <h2 class="section-title">End-to-end pipeline</h2>
-    <p class="section-sub">Every component is async and independently sessionized  -  a failure in any stage doesn't block the others.</p>
+    <p class="section-sub">Every component is async and independently sessionized - a failure in any stage doesn't block the others.</p>
 
     <div class="arch-diagram">
       <svg class="arch-svg" viewBox="0 0 920 380" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -719,7 +719,7 @@
       <div class="pipeline-card">
         <div class="pipeline-num">01</div>
         <h3>Classify</h3>
-        <p>A Groq LLM (llama-3.3-70b-versatile) receives a truncated excerpt of the failing trace  -  inputs, outputs, error, and child_run names  -  and returns structured JSON: failure type, severity, title, description, root cause, and trace evidence quotes.</p>
+        <p>A Groq LLM (llama-3.3-70b-versatile) receives a truncated excerpt of the failing trace - inputs, outputs, error, and child_run names - and returns structured JSON: failure type, severity, title, description, root cause, and trace evidence quotes.</p>
         <div class="tag-row">
           <span class="tag">groq</span>
           <span class="tag">llama-3.3-70b</span>
@@ -741,7 +741,7 @@
       <div class="pipeline-card">
         <div class="pipeline-num">03</div>
         <h3>Eval Writer</h3>
-        <p>Groq synthesizes a LangSmith evaluator function  -  Python code you can add directly to your test suite. It includes a representative test input derived from the original failing trace and an expected output that the patched agent should produce.</p>
+        <p>Groq synthesizes a LangSmith evaluator function - Python code you can add directly to your test suite. It includes a representative test input derived from the original failing trace and an expected output that the patched agent should produce.</p>
         <div class="tag-row">
           <span class="tag">groq</span>
           <span class="tag">LangSmith eval</span>
@@ -852,7 +852,7 @@
       <div class="cap-card">
         <div class="cap-icon">⚡</div>
         <div>
-          <h3>Groq inference  -  free tier friendly</h3>
+          <h3>Groq inference - free tier friendly</h3>
           <p>Uses llama-3.3-70b-versatile on Groq's free tier. All traces are truncated to stay within the 12k TPM limit. Swap the model via <code>GROQ_MODEL</code> env var.</p>
         </div>
       </div>
@@ -860,14 +860,14 @@
         <div class="cap-icon">🔄</div>
         <div>
           <h3>WebSocket live feed</h3>
-          <p>Every pipeline event  -  failure classified, patch generated, eval written, shadow scored  -  is pushed to the dashboard instantly over a persistent WebSocket connection.</p>
+          <p>Every pipeline event - failure classified, patch generated, eval written, shadow scored - is pushed to the dashboard instantly over a persistent WebSocket connection.</p>
         </div>
       </div>
       <div class="cap-card">
         <div class="cap-icon">🔐</div>
         <div>
           <h3>Optional API key auth</h3>
-          <p>Set <code>API_KEY</code> to protect write endpoints. <code>/api/webhook/langsmith</code> is intentionally open  -  LangSmith can't send custom headers. Frontend picks up the key from <code>VITE_API_KEY</code>.</p>
+          <p>Set <code>API_KEY</code> to protect write endpoints. <code>/api/webhook/langsmith</code> is intentionally open - LangSmith can't send custom headers. Frontend picks up the key from <code>VITE_API_KEY</code>.</p>
         </div>
       </div>
       <div class="cap-card">
@@ -888,14 +888,14 @@
         <div class="cap-icon">🤖</div>
         <div>
           <h3>LangGraph orchestration</h3>
-          <p>Patch Bot is a proper LangGraph <code>StateGraph</code>  -  each node gets the full typed state, errors are logged individually, and the graph is compiled once and reused.</p>
+          <p>Patch Bot is a proper LangGraph <code>StateGraph</code> - each node gets the full typed state, errors are logged individually, and the graph is compiled once and reused.</p>
         </div>
       </div>
       <div class="cap-card">
         <div class="cap-icon">🐳</div>
         <div>
           <h3>Docker Hub image</h3>
-          <p>Pre-built image published on every version tag. No Python setup required  -  just <code>docker run</code> with your env vars and you're live in under 60 seconds.</p>
+          <p>Pre-built image published on every version tag. No Python setup required - just <code>docker run</code> with your env vars and you're live in under 60 seconds.</p>
         </div>
       </div>
       <div class="cap-card">
@@ -985,7 +985,7 @@
               <div class="mock-card">
                 <div class="mock-card-top">
                   <span class="sev medium">MEDIUM</span>
-                  <span class="mock-card-title">Context Window Exceeded  -  145K tokens</span>
+                  <span class="mock-card-title">Context Window Exceeded - 145K tokens</span>
                   <span class="mock-status classified">◌ classified</span>
                 </div>
                 <div class="mock-card-root">Input to the model exceeded the 128K token context limit by 17K tokens. Full document was injected without chunking or summarization.</div>
@@ -1019,7 +1019,7 @@
               <div class="mock-patch-header">
                 <div>
                   <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem;">agent/main_agent.py · code_fix</div>
-                  <div class="mock-patch-title">Fix: infinite_loop  -  add max_iterations guard to ReAct agent</div>
+                  <div class="mock-patch-title">Fix: infinite_loop - add max_iterations guard to ReAct agent</div>
                 </div>
                 <div style="display:flex;gap:0.5rem;flex-shrink:0;">
                   <span class="mock-approve">✓ Approve &amp; Merge</span>
@@ -1043,7 +1043,7 @@
               <div class="mock-patch-header">
                 <div>
                   <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem;">agent/answer.py · prompt_rewrite</div>
-                  <div class="mock-patch-title">Fix: hallucination  -  add grounding instruction to system prompt</div>
+                  <div class="mock-patch-title">Fix: hallucination - add grounding instruction to system prompt</div>
                 </div>
                 <div style="display:flex;gap:0.5rem;flex-shrink:0;">
                   <span class="mock-approve">✓ Approve &amp; Merge</span>
@@ -1157,7 +1157,7 @@
           <div class="setup-n">1</div>
           <div style="flex:1;">
             <h4>Run the backend</h4>
-            <pre><span class="cm"># Fastest path  -  no clone required</span>
+            <pre><span class="cm"># Fastest path - no clone required</span>
 docker run -d \
   -e <span class="var">GROQ_API_KEY</span>=gsk_... \
   -e <span class="var">LANGCHAIN_API_KEY</span>=lsv2_... \
@@ -1181,7 +1181,7 @@ docker run -d \
   -d <span class="str">'{"failure_hint": "infinite_loop"}'</span>
 
 <span class="cm"># Expected: {"status":"simulated","failure_id":"..."}</span>
-<span class="cm"># Watch Railway logs  -  pipeline runs in ~30 seconds</span></pre>
+<span class="cm"># Watch Railway logs - pipeline runs in ~30 seconds</span></pre>
           </div>
         </div>
       </div>
@@ -1199,7 +1199,7 @@ cd traceguard-ai/backend
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-<span class="cm"># Edit .env  -  set GROQ_API_KEY at minimum</span></pre>
+<span class="cm"># Edit .env - set GROQ_API_KEY at minimum</span></pre>
           </div>
         </div>
         <div class="setup-step">
@@ -1238,7 +1238,7 @@ npm run dev
           <div class="setup-n">1</div>
           <div style="flex:1;">
             <h4>Deploy backend to Railway</h4>
-            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.8rem;">Railway → New Project → Deploy from GitHub → select <code style="color:var(--teal);">traceguard-ai</code>. Add a PostgreSQL plugin  -  Railway injects <code style="color:var(--teal);">DATABASE_URL</code> automatically.</p>
+            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.8rem;">Railway → New Project → Deploy from GitHub → select <code style="color:var(--teal);">traceguard-ai</code>. Add a PostgreSQL plugin - Railway injects <code style="color:var(--teal);">DATABASE_URL</code> automatically.</p>
           </div>
         </div>
         <div class="setup-step">
@@ -1294,7 +1294,7 @@ Trigger: Run Failed</pre>
       <a class="link-card" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">
         <div class="link-icon">⭐</div>
         <h3>Main Repository</h3>
-        <p>Full source  -  FastAPI backend, LangGraph agents, React 19 frontend, Docker + Railway config.</p>
+        <p>Full source - FastAPI backend, LangGraph agents, React 19 frontend, Docker + Railway config.</p>
         <div class="link-arrow">github.com/saurabh-oss/traceguard-ai →</div>
       </a>
       <a class="link-card" href="https://github.com/saurabh-oss/traceguard-demo-agent" target="_blank">
@@ -1306,7 +1306,7 @@ Trigger: Run Failed</pre>
       <a class="link-card" href="https://hub.docker.com/r/sauvast/traceguard-ai" target="_blank">
         <div class="link-icon">🐳</div>
         <h3>Docker Hub</h3>
-        <p>Pre-built image. Run the full backend with a single <code>docker run</code>  -  no Python environment needed.</p>
+        <p>Pre-built image. Run the full backend with a single <code>docker run</code> - no Python environment needed.</p>
         <div class="link-arrow">hub.docker.com/r/sauvast/traceguard-ai →</div>
       </a>
       <a class="link-card" href="https://github.com/saurabh-oss/traceguard-ai/blob/main/CONTRIBUTING.md" target="_blank">
