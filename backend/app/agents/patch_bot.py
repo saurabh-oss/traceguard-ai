@@ -17,6 +17,35 @@ PLACEHOLDER_CODE = {
     "empty_response": 'def get_answer(q):\n    result = agent.invoke({"input": q})\n    # BUG: no fallback when output is missing\n    return result.get("output")\n',
 }
 
+def _extract_files_from_trace(trace: dict) -> list[str]:
+    """Pull user-space Python file paths out of a LangSmith error/traceback."""
+    error_text = trace.get("error", "") or ""
+    # Also check nested child_runs for errors
+    for child in trace.get("child_runs", []):
+        error_text += "\n" + (child.get("error", "") or "")
+    paths = re.findall(r'File ["\']([^"\']+\.py)["\']', error_text)
+    # Drop stdlib and site-packages
+    user_paths = [
+        p.lstrip("./") for p in paths
+        if "site-packages" not in p and not p.startswith("/usr") and not p.startswith("/opt")
+    ]
+    return list(dict.fromkeys(user_paths))  # deduplicate, preserve order
+
+def _search_repo_for_agent_files(repo) -> list[str]:
+    """Walk the repo tree and return likely agent entry-point files."""
+    try:
+        contents = repo.get_git_tree(repo.default_branch, recursive=True).tree
+        candidates = []
+        for item in contents:
+            p = item.path
+            if item.type == "blob" and p.endswith(".py"):
+                name = p.split("/")[-1]
+                if any(k in name for k in ("agent", "main", "chain", "graph", "bot")):
+                    candidates.append(p)
+        return candidates[:6]  # cap at 6 to avoid huge prompts
+    except Exception:
+        return []
+
 class PatchState(TypedDict):
     failure_id: str
     failure_type: str
@@ -40,18 +69,40 @@ async def fetch_code_node(state: PatchState) -> PatchState:
             from github import Github
             g = Github(settings.github_token)
             repo = g.get_repo(settings.github_repo)
-            for path in ["agent/agent.py", "agent/main_agent.py", "src/agent.py"]:
+
+            # 1. Paths extracted from the actual stack trace take priority
+            trace_paths = _extract_files_from_trace(state.get("trace_json", {}))
+            # 2. Fall back to heuristic scan of the repo tree
+            repo_agent_files = _search_repo_for_agent_files(repo) if not trace_paths else []
+            # 3. Static fallbacks last
+            static_fallbacks = ["agent/agent.py", "agent/main_agent.py", "src/agent.py", "main.py"]
+            candidate_paths = trace_paths + repo_agent_files + [
+                p for p in static_fallbacks if p not in trace_paths
+            ]
+
+            code_parts: list[str] = []
+            primary_file: str | None = None
+            for path in candidate_paths[:4]:  # keep prompt size reasonable
                 try:
                     f = repo.get_contents(path)
-                    state["repo_code"] = f.decoded_content.decode()
-                    state["file_path"] = path
-                    return state
+                    code_parts.append(f"# === {path} ===\n{f.decoded_content.decode()}")
+                    if primary_file is None:
+                        primary_file = path
                 except Exception:
                     continue
+
+            if code_parts:
+                state["repo_code"] = "\n\n".join(code_parts)
+                state["file_path"] = primary_file or candidate_paths[0]
+                return state
         except Exception as e:
             state["error"] = str(e)
-    state["repo_code"] = PLACEHOLDER_CODE.get(state["failure_type"],
-        f'def run_agent(q):\n    # {state["failure_type"]}\n    return agent.invoke({{"input": q}})["output"]\n')
+
+    # Offline / no GitHub token — use illustrative placeholder
+    state["repo_code"] = PLACEHOLDER_CODE.get(
+        state["failure_type"],
+        f'def run_agent(q):\n    # {state["failure_type"]}\n    return agent.invoke({{"input": q}})["output"]\n',
+    )
     state["file_path"] = "agent/main_agent.py"
     return state
 

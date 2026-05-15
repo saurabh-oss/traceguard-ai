@@ -13,7 +13,20 @@ from app.api.ws import connect, disconnect
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     from app.langsmith_poller import start_poller
+    from app.db.database import SessionLocal
+    from app.models.failure import Failure, FailureStatus
+    from app.api.webhook import process_trace
     asyncio.create_task(start_poller())
+    # Re-queue any failures that were mid-pipeline when the server last restarted
+    db = SessionLocal()
+    try:
+        stuck = db.query(Failure).filter(
+            Failure.status == FailureStatus.classified
+        ).all()
+        for f in stuck:
+            asyncio.create_task(process_trace(f.id, f.raw_trace or {}))
+    finally:
+        db.close()
     yield
 
 app = FastAPI(title="TraceGuard AI", version="1.0.0", lifespan=lifespan)

@@ -69,6 +69,26 @@ LangSmith Engine
 
 ---
 
+## Quick Start — Docker Hub (fastest)
+
+```bash
+docker run -d \
+  -e GROQ_API_KEY=gsk_... \
+  -e LANGCHAIN_API_KEY=lsv2_... \
+  -e LANGCHAIN_PROJECT=traceguard-ai \
+  -e GITHUB_TOKEN=ghp_... \
+  -e GITHUB_REPO=your-org/your-repo \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -e CORS_ORIGINS=https://your-frontend.vercel.app \
+  -e API_KEY=your-secret-key \
+  -p 8000:8000 \
+  saurabh-oss/traceguard-ai:latest
+```
+
+Backend runs at `http://localhost:8000`. All config is via environment variables — no config files needed.
+
+---
+
 ## Quick Start — Local Dev
 
 ### Prerequisites
@@ -280,10 +300,27 @@ traceguard-ai/
 | `POST` | `/api/webhook/simulate` | Inject a demo failure |
 | `WS` | `/ws` | Live event stream |
 
+### Authentication
+
+Set `API_KEY` in your environment to enable auth. All write endpoints (`/api/webhook/*`, `/api/patches/*/approve`) require the header:
+
+```
+X-API-Key: your-secret-key
+```
+
+Leave `API_KEY` unset to run open (suitable for local dev and demos).
+
 ### Simulate via curl
 ```bash
+# No auth (local dev)
 curl -X POST http://localhost:8000/api/webhook/simulate \
   -H "Content-Type: application/json" \
+  -d '{"failure_hint": "hallucination"}'
+
+# With auth (production)
+curl -X POST https://your-backend/api/webhook/simulate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
   -d '{"failure_hint": "hallucination"}'
 ```
 

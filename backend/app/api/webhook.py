@@ -8,6 +8,7 @@ from app.agents.patch_bot import run_patch_bot_async
 from app.eval_writer.eval_synthesizer import synthesize_eval_async
 from app.shadow_runner.shadow_runner import run_shadow_eval_async
 from app.api.ws import broadcast
+from app.api.auth import require_api_key
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 
@@ -44,7 +45,7 @@ async def process_trace(failure_id: str, trace: dict):
     finally:
         db.close()
 
-@router.post("/langsmith")
+@router.post("/langsmith", dependencies=[Depends(require_api_key)])
 async def langsmith_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
     """Real LangSmith Engine webhook endpoint."""
     failure = Failure(raw_trace=payload, run_id=payload.get("id"),

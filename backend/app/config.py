@@ -12,5 +12,6 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./traceguard.db"
     cors_origins: str = "http://localhost:5173"
     secret_key: str = "change-me"
+    api_key: str = ""  # if set, all write endpoints require X-API-Key header
 
 settings = Settings()
