@@ -48,8 +48,12 @@ async def process_trace(failure_id: str, trace: dict):
 @router.post("/langsmith", dependencies=[Depends(require_api_key)])
 async def langsmith_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
     """Real LangSmith Engine webhook endpoint."""
-    failure = Failure(raw_trace=payload, run_id=payload.get("id"),
-                      status=FailureStatus.new)
+    run_id = payload.get("id")
+    if run_id:
+        existing = db.query(Failure).filter(Failure.run_id == run_id).first()
+        if existing:
+            return {"status": "duplicate", "failure_id": existing.id}
+    failure = Failure(raw_trace=payload, run_id=run_id, status=FailureStatus.new)
     db.add(failure)
     db.commit()
     db.refresh(failure)

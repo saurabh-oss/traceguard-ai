@@ -3,15 +3,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.db.database import engine
-from app.db.database import Base
-from app.models import failure, patch, eval_case   # register models
+from app.models import failure, patch, eval_case   # noqa: F401 — register models with SQLAlchemy
 from app.api import failures, patches, evals, webhook
 from app.api.ws import connect, disconnect
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Schema is managed by Alembic (run via `alembic upgrade head` in Dockerfile CMD)
     from app.langsmith_poller import start_poller
     from app.db.database import SessionLocal
     from app.models.failure import Failure, FailureStatus
