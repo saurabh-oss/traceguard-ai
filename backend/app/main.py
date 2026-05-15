@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -11,6 +12,8 @@ from app.api.ws import connect, disconnect
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from app.langsmith_poller import start_poller
+    asyncio.create_task(start_poller())
     yield
 
 app = FastAPI(title="TraceGuard AI", version="1.0.0", lifespan=lifespan)
