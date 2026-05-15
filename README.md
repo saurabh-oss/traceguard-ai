@@ -64,12 +64,14 @@ LangSmith Engine
 | Database | SQLite (dev) → PostgreSQL (prod) |
 | Real-time | WebSocket push |
 | Frontend | React 19 + Vite + Tailwind CSS v4 |
-| GitHub Integration | PyGitHub (auto PR creation) |
+| GitHub Integration | PyGitHub (auto PR creation + merge/close) |
 | Containers | Docker + Docker Compose |
 
 ---
 
 ## Quick Start — Docker Hub (fastest)
+
+> **Note:** Without `DATABASE_URL` the backend defaults to SQLite, which is lost when the container restarts. Set `DATABASE_URL` to a PostgreSQL connection string for persistent storage.
 
 ```bash
 docker run -d \
@@ -77,7 +79,7 @@ docker run -d \
   -e LANGCHAIN_API_KEY=lsv2_... \
   -e LANGCHAIN_PROJECT=traceguard-ai \
   -e GITHUB_TOKEN=ghp_... \
-  -e GITHUB_REPO=your-org/your-repo \
+  -e GITHUB_REPO=your-org/your-agent-repo \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
   -e CORS_ORIGINS=https://your-frontend.vercel.app \
   -e API_KEY=your-secret-key \
@@ -106,7 +108,7 @@ cd traceguard-ai
 ```bash
 cd backend
 python3.12 -m venv .venv
-source .venv/bin/activate        # Windows WSL: same command
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 # Open .env and set GROQ_API_KEY=gsk_...
@@ -124,7 +126,7 @@ Open **http://localhost:5173**
 
 ---
 
-## Quick Start — Docker
+## Quick Start — Docker Compose
 
 > Requires [Docker Desktop](https://www.docker.com/products/docker-desktop) with WSL2 integration enabled.
 
@@ -134,7 +136,7 @@ cp backend/.env.example backend/.env
 # edit backend/.env
 
 # 2. Start everything
-sudo docker compose up --build
+docker compose up --build
 ```
 
 - Backend: http://localhost:8000
@@ -165,9 +167,11 @@ With both servers running, open the Dashboard and click any simulate button:
 2. Groq classifies it — severity badge and failure type appear
 3. Patch Bot (LangGraph: fetch → fix → PR) runs — status `patched`
 4. Eval Writer generates a LangSmith evaluator — visible in **Eval Vault**
-5. Shadow Runner scores before vs after — auto-promotes if improvement ≥10%
+5. Shadow Runner scores before vs after — auto-promotes if improvement ≥ 10%
 
 Click any card to expand it: root cause, trace evidence, linked patch with PR URL, and shadow scores are all shown inline.
+
+Go to **Patch Review** to approve or reject the generated PR. Approving squash-merges it on GitHub; rejecting closes it with a comment.
 
 ### Fire all 5 scenarios at once (demo agent)
 
@@ -204,7 +208,7 @@ In LangSmith → your project → **Settings → Webhooks → Add Webhook**:
 | URL | `https://your-backend-domain/api/webhook/langsmith` |
 | Trigger | **Run Failed** |
 
-Every failed LangSmith run now flows into TraceGuard automatically.
+Every failed LangSmith run now flows into TraceGuard automatically. This endpoint is intentionally auth-free — LangSmith webhooks cannot send custom headers.
 
 ---
 
@@ -214,15 +218,18 @@ Every failed LangSmith run now flows into TraceGuard automatically.
 
 1. [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → select `traceguard-ai`
 2. Railway auto-detects the root `Dockerfile`
-3. Add a **PostgreSQL** plugin: Railway injects `DATABASE_URL` automatically
-4. Set these **Variables** in Railway:
+3. Add a **PostgreSQL** plugin: Railway injects `DATABASE_URL` automatically — do not set it manually
+4. Set these **Variables** in the Railway backend service:
 
 | Variable | Value |
 |---|---|
 | `GROQ_API_KEY` | your Groq key |
 | `LANGCHAIN_API_KEY` | your LangSmith key |
 | `LANGCHAIN_PROJECT` | `traceguard-ai` |
+| `GITHUB_TOKEN` | GitHub personal access token with `repo` scope |
+| `GITHUB_REPO` | `your-org/your-agent-repo` |
 | `SECRET_KEY` | any random string (`openssl rand -hex 32`) |
+| `API_KEY` | strong random secret for write-endpoint auth |
 | `CORS_ORIGINS` | your Vercel frontend URL |
 
 5. Railway gives you a public URL like `https://traceguard-ai-production.up.railway.app`
@@ -231,7 +238,9 @@ Every failed LangSmith run now flows into TraceGuard automatically.
 
 1. [vercel.com](https://vercel.com) → **Add New Project** → import `traceguard-ai`
 2. Set **Root Directory** to `frontend`
-3. Add environment variable: `VITE_API_URL=https://your-railway-url`
+3. Add environment variables:
+   - `VITE_API_URL` → `https://your-railway-url`
+   - `VITE_API_KEY` → same value as `API_KEY` in Railway
 4. Deploy
 
 ---
@@ -240,27 +249,32 @@ Every failed LangSmith run now flows into TraceGuard automatically.
 
 ```
 traceguard-ai/
-├── .github/workflows/ci.yml     # GitHub Actions — backend + frontend CI
+├── .github/workflows/
+│   ├── ci.yml               # Backend + frontend CI on every push
+│   └── docker.yml           # Docker Hub publish on version tags (v*)
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app entry point + WebSocket
-│   │   ├── config.py            # Settings (Groq key, model, DB URL…)
+│   │   ├── main.py          # FastAPI entry point, WebSocket, lifespan startup
+│   │   ├── config.py        # Settings (Pydantic, reads from env / .env)
 │   │   ├── api/
-│   │   │   ├── webhook.py       # /simulate + /langsmith endpoints
-│   │   │   ├── failures.py      # GET /api/failures
-│   │   │   ├── patches.py       # GET/POST /api/patches (approve/reject)
-│   │   │   ├── evals.py         # GET /api/evals
-│   │   │   └── ws.py            # WebSocket broadcaster
+│   │   │   ├── webhook.py   # POST /simulate + /langsmith, full pipeline
+│   │   │   ├── failures.py  # GET /api/failures
+│   │   │   ├── patches.py   # GET/POST /api/patches (approve / reject)
+│   │   │   ├── evals.py     # GET /api/evals
+│   │   │   ├── auth.py      # X-API-Key header dependency
+│   │   │   └── ws.py        # WebSocket broadcaster
 │   │   ├── classifier/
-│   │   │   └── classifier.py    # Groq-powered failure taxonomy
+│   │   │   └── classifier.py    # Groq-powered failure taxonomy (10 types)
 │   │   ├── agents/
 │   │   │   └── patch_bot.py     # LangGraph: fetch_code → generate_fix → open_pr
 │   │   ├── eval_writer/
-│   │   │   └── eval_synthesizer.py
+│   │   │   └── eval_synthesizer.py  # Auto-generates LangSmith evaluator code
 │   │   ├── shadow_runner/
-│   │   │   └── shadow_runner.py # A/B eval scoring + auto-promote logic
-│   │   ├── models/              # SQLAlchemy ORM: Failure, Patch, EvalCase
-│   │   └── db/database.py
+│   │   │   └── shadow_runner.py     # LLM-as-judge A/B scoring + auto-promote
+│   │   ├── langsmith_poller.py      # Background task: polls LangSmith every 60s
+│   │   ├── models/                  # SQLAlchemy ORM: Failure, Patch, EvalCase
+│   │   └── db/database.py           # Engine, SessionLocal, get_db
+│   ├── alembic/             # Database migrations
 │   ├── .env.example
 │   ├── requirements.txt
 │   └── Dockerfile
@@ -272,12 +286,14 @@ traceguard-ai/
 │   │   │   └── EvalVault.tsx    # Evaluator code + shadow scores
 │   │   ├── components/
 │   │   │   └── LiveFeed.tsx     # WebSocket live event ticker
-│   │   └── lib/api.ts           # Typed API calls (axios)
+│   │   └── lib/api.ts           # Typed API calls (axios + env-based base URL)
+│   ├── .env.example
 │   ├── vite.config.ts           # Proxy config (BACKEND_URL env var)
 │   └── Dockerfile
 ├── scripts/
 │   └── run_demo_agent.py        # Fires all 5 failure types in sequence
 ├── docker-compose.yml
+├── Dockerfile                   # Root: used by Railway and Docker Hub
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
@@ -287,28 +303,31 @@ traceguard-ai/
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/health` | Health check |
-| `GET` | `/api/failures` | List all failures |
-| `GET` | `/api/failures/{id}` | Get one failure |
-| `GET` | `/api/patches` | List all patches |
-| `POST` | `/api/patches/{id}/approve` | Approve a patch |
-| `POST` | `/api/patches/{id}/reject` | Reject a patch |
-| `GET` | `/api/evals` | List all eval cases |
-| `POST` | `/api/webhook/langsmith` | Real LangSmith Engine webhook |
-| `POST` | `/api/webhook/simulate` | Inject a demo failure |
-| `WS` | `/ws` | Live event stream |
+| Method | Endpoint | Auth required | Description |
+|---|---|---|---|
+| `GET` | `/health` | No | Health check |
+| `GET` | `/api/failures` | No | List all failures |
+| `GET` | `/api/failures/{id}` | No | Get one failure with full detail |
+| `GET` | `/api/patches` | No | List all patches |
+| `GET` | `/api/patches/{id}` | No | Get one patch |
+| `POST` | `/api/patches/{id}/approve` | Yes | Squash-merge PR, mark resolved |
+| `POST` | `/api/patches/{id}/reject` | Yes | Close PR, mark rejected |
+| `GET` | `/api/evals` | No | List all eval cases with scores |
+| `POST` | `/api/webhook/langsmith` | No | Real LangSmith webhook receiver |
+| `POST` | `/api/webhook/simulate` | Yes | Inject a demo failure |
+| `WS` | `/ws` | No | Live event stream |
 
 ### Authentication
 
-Set `API_KEY` in your environment to enable auth. All write endpoints (`/api/webhook/*`, `/api/patches/*/approve`) require the header:
+Set `API_KEY` in your environment to enable auth. Write endpoints require:
 
 ```
 X-API-Key: your-secret-key
 ```
 
-Leave `API_KEY` unset to run open (suitable for local dev and demos).
+`/api/webhook/langsmith` is intentionally auth-free — LangSmith cannot send custom request headers.
+
+Leave `API_KEY` unset to run fully open (suitable for local dev and demos).
 
 ### Simulate via curl
 ```bash
@@ -324,6 +343,8 @@ curl -X POST https://your-backend/api/webhook/simulate \
   -d '{"failure_hint": "hallucination"}'
 ```
 
+Valid `failure_hint` values: `infinite_loop`, `hallucination`, `tool_misuse`, `context_overflow`, `empty_response`
+
 ---
 
 ## Groq Model Options
@@ -335,21 +356,6 @@ Set `GROQ_MODEL` in `backend/.env`:
 | `llama-3.3-70b-versatile` | Fast | Default — best quality |
 | `llama3-8b-8192` | Fastest | High-volume / testing |
 | `llama-3.1-8b-instant` | Instant | Demo / low latency |
-
----
-
-## Known Issues & Fixes Applied
-
-| Issue | Fix |
-|---|---|
-| Missing `__init__.py` in all `backend/app/` packages | Added 8 empty `__init__.py` files — Python wouldn't recognize packages without them |
-| `process_trace` background task received a closed DB session | Function now opens its own `SessionLocal()` instead of using the request-scoped session |
-| `langchain-core` version conflict in `requirements.txt` | Loosened strict pin (`==0.3.10`) to `>=0.3.12` to allow pip to resolve compatible versions |
-| Frontend `package.json` missing half its dependencies | Added `@tanstack/react-query`, `axios`, `react-router-dom`, `lucide-react`, `@tailwindcss/vite`, `tailwindcss` |
-| TypeScript `erasableSyntaxOnly` unknown in TS 5.7 | Removed from both `tsconfig.app.json` and `tsconfig.node.json` (it's a TS 5.8+ option) |
-| Docker: frontend proxy `ECONNREFUSED` to backend | Vite proxy target now reads `BACKEND_URL` env var; docker-compose sets `BACKEND_URL=http://backend:8000` so containers talk to each other correctly |
-| Docker: `permission denied` on Docker socket in WSL2 | `sudo usermod -aG docker $USER`, then reopen WSL terminal |
-| OpenAI dependency | Swapped to Groq (`langchain-groq`) — faster, free tier available, no credit card needed for dev |
 
 ---
 

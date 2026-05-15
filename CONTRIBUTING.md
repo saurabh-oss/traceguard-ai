@@ -65,8 +65,14 @@ Open an Issue tagged `enhancement`. Describe the use case and proposed behavior.
 
 1. Fork the repo and create a branch: `git checkout -b feat/my-feature`
 2. Make your changes
-3. Verify the backend imports: `python -c "from app.main import app"`
-4. Verify the frontend builds: `npm run build`
+3. Verify the backend imports (from `backend/` with venv active):
+   ```bash
+   python -c "from app.main import app; print('OK')"
+   ```
+4. Verify the frontend builds:
+   ```bash
+   cd frontend && npm run build
+   ```
 5. Open a PR against `main` with a clear description of what changed and why
 
 ### PR Guidelines
