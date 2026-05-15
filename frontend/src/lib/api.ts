@@ -1,5 +1,9 @@
 import axios from 'axios'
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL ?? '' })
+const _base = import.meta.env.VITE_API_URL ?? ''
+export const api = axios.create({ baseURL: _base })
+export const wsUrl = _base
+  ? _base.replace(/^http/, 'ws') + '/ws'
+  : `ws://${location.host}/ws`
 export const getFailures  = () => api.get('/api/failures').then(r => r.data)
 export const getPatches   = () => api.get('/api/patches').then(r => r.data)
 export const getEvals     = () => api.get('/api/evals').then(r => r.data)

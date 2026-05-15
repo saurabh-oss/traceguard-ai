@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { getFailures, getPatches, getEvals, simulateFailure } from '../lib/api'
+import { getFailures, getPatches, getEvals, simulateFailure, wsUrl } from '../lib/api'
 
 const SEV_BADGE: Record<string, string> = {
   critical: 'bg-red-900 text-red-300 border border-red-700',
@@ -39,7 +39,7 @@ export default function Dashboard() {
   })
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${location.host}/ws`)
+    const ws = new WebSocket(wsUrl)
     ws.onmessage = () => {
       qc.invalidateQueries({ queryKey: ['failures'] })
       qc.invalidateQueries({ queryKey: ['patches'] })

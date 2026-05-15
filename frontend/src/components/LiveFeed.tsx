@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { wsUrl } from '../lib/api'
 
 export default function LiveFeed() {
   const [events, setEvents] = useState<string[]>([])
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${location.host}/ws`)
+    const ws = new WebSocket(wsUrl)
     ws.onopen  = () => setConnected(true)
     ws.onclose = () => setConnected(false)
     ws.onmessage = (e) => {
