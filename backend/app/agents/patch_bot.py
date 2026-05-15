@@ -1,5 +1,7 @@
-import json, re, uuid
+import json, logging, re, uuid
 from typing import TypedDict, Optional
+
+log = logging.getLogger(__name__)
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -96,6 +98,7 @@ async def fetch_code_node(state: PatchState) -> PatchState:
                 state["file_path"] = primary_file or candidate_paths[0]
                 return state
         except Exception as e:
+            log.error("fetch_code_node GitHub error: %s", e)
             state["error"] = str(e)
 
     # Offline / no GitHub token — use illustrative placeholder
@@ -158,9 +161,16 @@ async def open_pr_node(state: PatchState) -> PatchState:
             state["pr_url"] = pr.html_url
             state["pr_number"] = pr.number
         except Exception as e:
+            log.error("open_pr_node GitHub error (repo=%s file=%s): %s",
+                      settings.github_repo, state.get("file_path"), e)
             state["error"] = str(e)
             state["pr_url"] = f"https://github.com/{settings.github_repo}/pull/draft"
     else:
+        missing = []
+        if not settings.github_token: missing.append("GITHUB_TOKEN")
+        if not settings.github_repo:  missing.append("GITHUB_REPO")
+        if not state.get("patched_code"): missing.append("patched_code")
+        log.warning("open_pr_node skipped — missing: %s", ", ".join(missing))
         state["pr_url"] = f"https://github.com/sandbox/repo/pull/{branch[-8:]}"
     return state
 
