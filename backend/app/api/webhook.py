@@ -45,7 +45,7 @@ async def process_trace(failure_id: str, trace: dict):
     finally:
         db.close()
 
-@router.post("/langsmith", dependencies=[Depends(require_api_key)])
+@router.post("/langsmith")
 async def langsmith_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
     """Real LangSmith Engine webhook endpoint."""
     run_id = payload.get("id")

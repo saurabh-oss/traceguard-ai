@@ -33,19 +33,26 @@ Return ONLY valid JSON:
   "trace_evidence": ["<direct quote from trace showing the problem>"]
 }}"""
 
+def _trim(value, max_chars: int = 400) -> str:
+    """Truncate any value to a safe string length for the LLM prompt."""
+    s = json.dumps(value) if not isinstance(value, str) else value
+    return s[:max_chars] + "…" if len(s) > max_chars else s
+
+
 async def classify_trace_async(trace: dict) -> dict:
     llm = ChatGroq(model=settings.groq_model, temperature=0,
                    api_key=settings.groq_api_key)
+    # Keep the excerpt small — Groq free tier has a 12k TPM limit
     excerpt = {
         "run_id":     trace.get("id"),
         "name":       trace.get("name"),
-        "inputs":     trace.get("inputs"),
-        "outputs":    trace.get("outputs"),
-        "error":      trace.get("error"),
+        "inputs":     _trim(trace.get("inputs"), 300),
+        "outputs":    _trim(trace.get("outputs"), 300),
+        "error":      _trim(trace.get("error"), 600),
         "child_runs": [
             {"run_type": r.get("run_type"), "name": r.get("name"),
-             "inputs": r.get("inputs"), "error": r.get("error")}
-            for r in (trace.get("child_runs") or [])[:15]
+             "error": _trim(r.get("error"), 200)}
+            for r in (trace.get("child_runs") or [])[:8]
         ],
         "latency_ms": trace.get("latency_ms"),
     }
