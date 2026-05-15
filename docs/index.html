@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TraceGuard AI — Autonomous Quality Firewall for LLM Agents</title>
+  <meta name="description" content="TraceGuard AI detects, classifies, patches, and evaluates LLM agent failures automatically. Built on LangSmith, LangGraph, and Groq." />
+  <meta property="og:title" content="TraceGuard AI" />
+  <meta property="og:description" content="Autonomous quality firewall for LLM agents. Detect → Classify → Patch → Eval → Approve." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #020817;
+      --bg2:      #0d1526;
+      --bg3:      #111827;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(20,184,166,0.25);
+      --teal:     #14b8a6;
+      --teal-dim: #0d9488;
+      --sky:      #38bdf8;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --faint:    #475569;
+      --red:      #f87171;
+      --orange:   #fb923c;
+      --yellow:   #fbbf24;
+      --green:    #4ade80;
+      --purple:   #a78bfa;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: rgba(2,8,23,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-weight: 700; font-size: 1.05rem; color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo .dot { width:10px; height:10px; border-radius:50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+    .nav-links { display: flex; gap: 1.8rem; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight:500; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-btn {
+      background: var(--teal); color: #020817; padding: 0.4rem 1.1rem;
+      border-radius: 6px; font-size: 0.85rem; font-weight: 700;
+      text-decoration: none; transition: background .2s;
+    }
+    .nav-btn:hover { background: #2dd4bf; color: #020817 !important; }
+
+    /* ── SECTIONS ── */
+    section { padding: 5rem 1.5rem; }
+    .container { max-width: 1080px; margin: 0 auto; }
+    .section-label {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(20,184,166,0.1); border: 1px solid var(--border2);
+      color: var(--teal); font-size: 0.75rem; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 1.2rem;
+    }
+    .section-title { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; line-height: 1.15; margin-bottom: 1rem; }
+    .section-sub { color: var(--muted); font-size: 1.05rem; max-width: 680px; }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+      padding: 7rem 1.5rem 5rem;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(20,184,166,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(56,189,248,0.06) 0%, transparent 50%),
+        var(--bg);
+      position: relative; overflow: hidden;
+    }
+    .hero-grid {
+      position: absolute; inset: 0; opacity: 0.04;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.3);
+      color: var(--teal); font-size: 0.8rem; font-weight: 600;
+      padding: 0.4rem 1rem; border-radius: 999px; margin-bottom: 2rem;
+      position: relative; z-index: 1;
+    }
+    .hero-badge .pulse { width:7px; height:7px; border-radius:50%; background:var(--teal); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.3)} }
+    .hero-title {
+      font-size: clamp(2.4rem, 6vw, 4.5rem); font-weight: 900; line-height: 1.05;
+      letter-spacing: -0.03em; margin-bottom: 1.5rem; position: relative; z-index: 1;
+    }
+    .hero-title .grad {
+      background: linear-gradient(135deg, var(--teal) 0%, var(--sky) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      color: var(--muted); font-size: clamp(1rem, 2.5vw, 1.2rem);
+      max-width: 600px; margin: 0 auto 2.5rem; position: relative; z-index: 1;
+    }
+    .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; z-index:1; margin-bottom: 3.5rem; }
+    .btn-primary {
+      background: var(--teal); color: #020817; padding: 0.75rem 1.8rem;
+      border-radius: 8px; font-weight: 700; font-size: 0.95rem;
+      text-decoration: none; transition: all .2s; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary:hover { background: #2dd4bf; transform: translateY(-1px); box-shadow: 0 8px 25px rgba(20,184,166,0.3); }
+    .btn-ghost {
+      background: transparent; color: var(--text); padding: 0.75rem 1.8rem;
+      border-radius: 8px; font-weight: 600; font-size: 0.95rem;
+      text-decoration: none; border: 1px solid var(--border); transition: all .2s;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+    .hero-stats { display: flex; gap: 2.5rem; justify-content: center; flex-wrap: wrap; position:relative;z-index:1; }
+    .hero-stat { text-align: center; }
+    .hero-stat .num { font-size: 2rem; font-weight: 800; color: var(--teal); line-height: 1; }
+    .hero-stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* ── PROBLEM ── */
+    #problem { background: var(--bg2); }
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+    .problem-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.8rem; position: relative; overflow: hidden;
+    }
+    .problem-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--red) 0%, transparent 70%);
+    }
+    .problem-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .problem-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.6rem; }
+    .problem-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+    /* ── SOLUTION ── */
+    #solution { background: var(--bg); }
+    .quote-box {
+      background: rgba(20,184,166,0.06); border: 1px solid var(--border2);
+      border-left: 3px solid var(--teal); border-radius: 0 10px 10px 0;
+      padding: 1.5rem 2rem; margin: 2.5rem 0; font-size: 1.1rem;
+      font-style: italic; color: var(--text);
+    }
+    .quote-box span { color: var(--teal); font-style: normal; font-weight: 600; }
+    .solution-row { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; margin-top: 1rem; }
+    @media (max-width: 700px) { .solution-row { grid-template-columns: 1fr; } }
+    .solution-steps { display: flex; flex-direction: column; gap: 1.2rem; }
+    .step-item { display: flex; gap: 1rem; align-items: flex-start; }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%; background: rgba(20,184,166,0.15);
+      border: 1px solid var(--border2); color: var(--teal); font-weight: 700; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+    }
+    .step-item h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .step-item p { color: var(--muted); font-size: 0.85rem; }
+
+    /* ── ARCHITECTURE ── */
+    #architecture { background: var(--bg2); }
+    .arch-diagram {
+      margin: 3rem auto 0; max-width: 960px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 2.5rem; overflow-x: auto;
+    }
+    .arch-svg { display: block; margin: 0 auto; width: 100%; height: auto; min-width: 700px; }
+
+    /* ── PIPELINE STEPS ── */
+    #pipeline { background: var(--bg); }
+    .pipeline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+    .pipeline-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.8rem; position: relative; overflow: hidden;
+      transition: border-color .2s, transform .2s;
+    }
+    .pipeline-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .pipeline-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--teal) 0%, var(--sky) 100%);
+    }
+    .pipeline-num {
+      font-size: 3rem; font-weight: 900; color: rgba(20,184,166,0.15);
+      line-height: 1; margin-bottom: 1rem; font-variant-numeric: tabular-nums;
+    }
+    .pipeline-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .pipeline-card p { color: var(--muted); font-size: 0.88rem; line-height: 1.65; margin-bottom: 1rem; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .tag {
+      background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.2);
+      color: var(--teal); font-size: 0.72rem; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+      padding: 0.2rem 0.6rem; border-radius: 4px;
+    }
+    .tag.sky { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.2); color: var(--sky); }
+    .tag.purple { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.2); color: var(--purple); }
+
+    /* ── TAXONOMY ── */
+    #taxonomy { background: var(--bg2); }
+    .taxonomy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 3rem; }
+    .taxonomy-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.2rem 1.4rem;
+      transition: border-color .2s;
+    }
+    .taxonomy-card:hover { border-color: var(--border2); }
+    .tax-name {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 600;
+      color: var(--teal); margin-bottom: 0.4rem;
+    }
+    .taxonomy-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── CAPABILITIES ── */
+    #capabilities { background: var(--bg); }
+    .cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+    .cap-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.6rem; display: flex; gap: 1rem; align-items: flex-start;
+      transition: border-color .2s;
+    }
+    .cap-card:hover { border-color: var(--border2); }
+    .cap-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(20,184,166,0.1); border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+    }
+    .cap-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.35rem; }
+    .cap-card p { color: var(--muted); font-size: 0.86rem; line-height: 1.6; }
+
+    /* ── SCREENSHOTS ── */
+    #screenshots { background: var(--bg2); }
+    .tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; width: fit-content; margin-bottom: 2rem; }
+    .tab {
+      padding: 0.6rem 1.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      background: transparent; color: var(--muted); border: none; transition: all .15s;
+    }
+    .tab.active { background: var(--teal); color: #020817; }
+    .tab:hover:not(.active) { background: rgba(255,255,255,0.04); color: var(--text); }
+    .screen-panel { display: none; }
+    .screen-panel.active { display: block; }
+
+    /* Browser mockup */
+    .browser {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .browser-bar {
+      background: #1a2234; padding: 0.7rem 1rem;
+      display: flex; align-items: center; gap: 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dots { display: flex; gap: 0.4rem; }
+    .dot-red   { width:11px; height:11px; border-radius:50%; background:#ef4444; }
+    .dot-yel   { width:11px; height:11px; border-radius:50%; background:#f59e0b; }
+    .dot-grn   { width:11px; height:11px; border-radius:50%; background:#22c55e; }
+    .url-bar {
+      flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.25rem 0.8rem; font-size: 0.78rem;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace;
+    }
+    .browser-body { padding: 0; }
+
+    /* dashboard mockup */
+    .mock-nav {
+      background: #0d1526; padding: 0.7rem 1.2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .mock-nav-logo { color: var(--teal); font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; }
+    .mock-nav-links { display: flex; gap: 1.2rem; }
+    .mock-nav-link { color: var(--muted); font-size: 0.78rem; }
+    .mock-nav-link.active { color: var(--teal); }
+    .mock-feed { font-size: 0.7rem; color: var(--teal); font-family:'JetBrains Mono',monospace; background:rgba(20,184,166,0.06); border:1px solid var(--border2); padding:0.2rem 0.6rem; border-radius:4px; }
+    .mock-body { padding: 1.2rem; }
+    .mock-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 1.2rem; }
+    .mock-stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; }
+    .mock-stat-card .s-val { font-size: 1.4rem; font-weight: 800; color: var(--text); }
+    .mock-stat-card .s-lbl { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+    .mock-stat-card.crit .s-val { color: var(--red); }
+    .mock-stat-card.high .s-val { color: var(--orange); }
+    .sim-btns { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .sim-btn {
+      background: rgba(20,184,166,0.08); border: 1px solid var(--border2);
+      color: var(--teal); font-size: 0.7rem; font-weight: 600;
+      padding: 0.3rem 0.8rem; border-radius: 5px; cursor: default;
+    }
+    .mock-cards { display: flex; flex-direction: column; gap: 0.8rem; }
+    .mock-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .mock-card-top { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem; }
+    .sev { font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; letter-spacing:.05em; }
+    .sev.critical { background:rgba(239,68,68,.15); color:var(--red); border:1px solid rgba(239,68,68,.25); }
+    .sev.high     { background:rgba(251,146,60,.15); color:var(--orange); border:1px solid rgba(251,146,60,.25); }
+    .sev.medium   { background:rgba(251,191,36,.15); color:var(--yellow); border:1px solid rgba(251,191,36,.25); }
+    .sev.low      { background:rgba(74,222,128,.15); color:var(--green); border:1px solid rgba(74,222,128,.25); }
+    .mock-card-title { font-size: 0.85rem; font-weight: 600; flex: 1; }
+    .mock-status { font-size: 0.65rem; font-family:'JetBrains Mono',monospace; }
+    .mock-status.patched { color: var(--green); }
+    .mock-status.classified { color: var(--yellow); }
+    .mock-card-root { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+    .mock-evidence {
+      margin-top: 0.5rem; font-size: 0.7rem; font-family:'JetBrains Mono',monospace;
+      background: rgba(0,0,0,0.3); padding: 0.4rem 0.7rem; border-radius: 5px;
+      color: var(--red); border-left: 2px solid var(--red);
+    }
+    .mock-pr-row { margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+    .pr-badge {
+      font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px;
+      background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); color: var(--green);
+    }
+    .pr-link { font-size: 0.7rem; color: var(--sky); font-family:'JetBrains Mono',monospace; }
+
+    /* patch review mockup */
+    .mock-patch-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.8rem; overflow: hidden; }
+    .mock-patch-header { padding: 0.9rem 1rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 1px solid var(--border); }
+    .mock-patch-title { font-size: 0.85rem; font-weight: 600; flex: 1; }
+    .mock-approve { background: rgba(74,222,128,.15); border: 1px solid rgba(74,222,128,.3); color: var(--green); font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 5px; cursor: default; }
+    .mock-reject  { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.2);  color: var(--red);   font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 5px; cursor: default; }
+    .mock-diff { font-family:'JetBrains Mono',monospace; font-size: 0.72rem; padding: 0.8rem 1rem; line-height: 1.7; background: rgba(0,0,0,0.2); }
+    .diff-add { color: #86efac; }
+    .diff-rem { color: #fca5a5; }
+    .diff-ctx { color: var(--faint); }
+
+    /* eval vault mockup */
+    .mock-eval-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
+    .mock-eval-top { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
+    .eval-name { font-size: 0.85rem; font-weight: 600; flex: 1; }
+    .auto-promo { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; }
+    .auto-promo.yes { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.25); }
+    .auto-promo.no  { background: rgba(239,68,68,.1);  color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+    .score-row { display: flex; gap: 1.5rem; font-size: 0.8rem; }
+    .score-item { display: flex; flex-direction: column; gap: 0.1rem; }
+    .score-val { font-weight: 700; font-size: 1rem; }
+    .score-lbl { color: var(--muted); font-size: 0.7rem; }
+    .score-before { color: var(--orange); }
+    .score-after  { color: var(--green); }
+    .score-arrow  { color: var(--teal); font-size: 1.2rem; align-self: center; }
+    .eval-code {
+      margin-top: 0.8rem; background: rgba(0,0,0,.3); border-radius: 6px;
+      padding: 0.7rem; font-family:'JetBrains Mono',monospace; font-size: 0.7rem;
+      color: var(--muted); border: 1px solid var(--border); max-height: 100px; overflow: hidden;
+    }
+    .eval-code .kw { color: #c084fc; }
+    .eval-code .fn { color: #7dd3fc; }
+    .eval-code .str { color: #86efac; }
+    .eval-code .cm { color: var(--faint); font-style: italic; }
+
+    /* ── SETUP ── */
+    #setup { background: var(--bg); }
+    .setup-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; width: fit-content; margin-bottom: 2rem; }
+    .setup-tab {
+      padding: 0.6rem 1.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      background: transparent; color: var(--muted); border: none; transition: all .15s;
+    }
+    .setup-tab.active { background: var(--teal); color: #020817; }
+    .setup-tab:hover:not(.active) { background: rgba(255,255,255,0.04); color: var(--text); }
+    .setup-panel { display: none; }
+    .setup-panel.active { display: block; }
+    .setup-steps { display: flex; flex-direction: column; gap: 1.5rem; }
+    .setup-step { display: flex; gap: 1.2rem; }
+    .setup-n {
+      width: 30px; height: 30px; border-radius: 50%; background: rgba(20,184,166,.15);
+      border: 1px solid var(--border2); color: var(--teal); font-weight: 700; font-size: 0.8rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .setup-step h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+    pre {
+      background: #0a0f1a; border: 1px solid var(--border); border-radius: 8px;
+      padding: 1rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+      color: #cbd5e1; overflow-x: auto; line-height: 1.7;
+    }
+    pre .cm  { color: var(--faint); }
+    pre .kw  { color: #c084fc; }
+    pre .str { color: #86efac; }
+    pre .var { color: var(--sky); }
+    pre .op  { color: var(--teal); }
+
+    /* ── ENV TABLE ── */
+    .env-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 1rem; }
+    .env-table th { background: rgba(255,255,255,0.04); padding: 0.6rem 1rem; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+    .env-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+    .env-table tr:last-child td { border-bottom: none; }
+    .env-table code { font-family:'JetBrains Mono',monospace; font-size: 0.8rem; color: var(--teal); }
+    .env-table .req { color: var(--red); font-size: 0.7rem; font-weight: 700; }
+    .env-table .opt { color: var(--green); font-size: 0.7rem; font-weight: 700; }
+
+    /* ── LINKS ── */
+    #links { background: var(--bg2); }
+    .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.2rem; margin-top: 3rem; }
+    .link-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+      text-decoration: none; color: var(--text);
+      transition: border-color .2s, transform .2s; display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .link-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .link-icon { font-size: 1.8rem; }
+    .link-card h3 { font-size: 1rem; font-weight: 700; }
+    .link-card p { color: var(--muted); font-size: 0.84rem; }
+    .link-arrow { margin-top: auto; color: var(--teal); font-size: 0.85rem; font-weight: 600; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg); border-top: 1px solid var(--border);
+      padding: 2.5rem 1.5rem; text-align: center;
+    }
+    footer .foot-logo { font-weight: 700; color: var(--teal); margin-bottom: 0.5rem; }
+    footer p { color: var(--faint); font-size: 0.85rem; }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    .foot-links { display: flex; justify-content: center; gap: 2rem; margin: 1rem 0; }
+
+    /* ── DIVIDER ── */
+    .divider { height: 1px; background: var(--border); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .mock-stats { grid-template-columns: repeat(2,1fr); }
+      .nav-links .nav-btn, .nav-links a:not(.nav-btn) { display: none; }
+      .nav-links .nav-btn { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#hero">
+    <span class="dot"></span>
+    TraceGuard AI
+  </a>
+  <div class="nav-links">
+    <a href="#problem">Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#screenshots">Dashboard</a>
+    <a href="#setup">Setup</a>
+    <a class="nav-btn" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-badge"><span class="pulse"></span> Now live on Railway + Vercel</div>
+  <h1 class="hero-title">
+    Autonomous Quality Firewall<br/>
+    <span class="grad">for LLM Agents</span>
+  </h1>
+  <p class="hero-sub">
+    TraceGuard AI watches your LangSmith traces, detects failures, generates a patch PR,
+    writes an evaluator, and scores the fix — all before your on-call engineer wakes up.
+  </p>
+  <div class="hero-buttons">
+    <a class="btn-primary" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">
+      ⭐ Star on GitHub
+    </a>
+    <a class="btn-ghost" href="#setup">
+      → Quick Setup
+    </a>
+    <a class="btn-ghost" href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">
+      🐳 Docker Hub
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="num">10</div><div class="lbl">Failure types classified</div></div>
+    <div class="hero-stat"><div class="num">&lt;60s</div><div class="lbl">From failure to patch PR</div></div>
+    <div class="hero-stat"><div class="num">5</div><div class="lbl">Pipeline stages</div></div>
+    <div class="hero-stat"><div class="num">0</div><div class="lbl">Manual steps to detect</div></div>
+  </div>
+</section>
+
+<!-- ── PROBLEM ── -->
+<section id="problem">
+  <div class="container">
+    <div class="section-label">⚠ The Problem</div>
+    <h2 class="section-title">LLM agents fail silently and expensively</h2>
+    <p class="section-sub">Production AI agents hallucinate, loop, overflow context, and return empty responses — often without anyone noticing until a user complains.</p>
+
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">🔍</div>
+        <h3>You can't watch every trace</h3>
+        <p>LangSmith gives you observability — but sifting through thousands of traces to find the failing ones, then understanding why, is a full-time job you don't have budget for.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🌊</div>
+        <h3>Failures compound silently</h3>
+        <p>An infinite loop bug in your agent doesn't crash the server — it just burns API credits and returns degraded answers. By the time you notice, you've racked up thousands of bad responses.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">⏱</div>
+        <h3>Manual debugging is slow</h3>
+        <p>Reproducing LLM failures is hard. The trace is gone, the context window is stale, and writing a regression test requires understanding the failure type — work that takes hours, not minutes.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🤔</div>
+        <h3>Fixes are hard to validate</h3>
+        <p>Even after a patch, how do you know the fix actually worked? Running a shadow eval against the original failing trace requires infra you probably haven't built yet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SOLUTION ── -->
+<section id="solution">
+  <div class="container">
+    <div class="section-label">💡 The Solution</div>
+    <h2 class="section-title">A self-healing immune system for your agents</h2>
+
+    <div class="quote-box">
+      <span>"LangSmith Engine gives you the smoke detector.</span>
+      TraceGuard AI is the automatic sprinkler system."
+    </div>
+
+    <div class="solution-row">
+      <div>
+        <p style="color:var(--muted);font-size:1rem;line-height:1.8;margin-bottom:1.5rem;">
+          TraceGuard AI runs as a background service alongside your LangSmith project.
+          It polls for failed runs, classifies each failure against a 10-type taxonomy,
+          dispatches a LangGraph agent to fetch your code and generate a targeted fix,
+          auto-writes a regression evaluator, and scores the patch against the original
+          trace — all before you've had your first coffee.
+        </p>
+        <p style="color:var(--muted);font-size:1rem;line-height:1.8;">
+          A human remains in the loop for the final approval: every fix surfaces as a
+          GitHub PR with an explanation, diff, and shadow eval score. You click Approve — it merges.
+          You click Reject — it closes. No terminal required.
+        </p>
+      </div>
+      <div class="solution-steps">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div><h4>Detect</h4><p>LangSmith webhook or 60-second poller surfaces failed runs automatically.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div><h4>Classify</h4><p>Groq LLM maps the trace to one of 10 failure types with severity and root cause.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div><h4>Patch</h4><p>LangGraph agent fetches your real code from GitHub and generates a minimal targeted fix.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div><h4>Evaluate</h4><p>Groq-as-judge scores output quality before and after the patch on a 0–1 scale.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div><h4>Approve</h4><p>Dashboard shows PR, diff, and scores. One click to merge or reject.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ARCHITECTURE ── -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">🏗 Architecture</div>
+    <h2 class="section-title">End-to-end pipeline</h2>
+    <p class="section-sub">Every component is async and independently sessionized — a failure in any stage doesn't block the others.</p>
+
+    <div class="arch-diagram">
+      <svg class="arch-svg" viewBox="0 0 920 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background groups -->
+        <rect x="8" y="8" width="904" height="364" rx="12" fill="#0d1526" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+        <!-- INTAKE lane label -->
+        <text x="30" y="48" font-family="Inter,sans-serif" font-size="10" fill="#475569" letter-spacing="0.08em" font-weight="600">INTAKE</text>
+        <!-- PIPELINE lane label -->
+        <text x="30" y="210" font-family="Inter,sans-serif" font-size="10" fill="#475569" letter-spacing="0.08em" font-weight="600">PIPELINE</text>
+        <!-- OUTPUT lane label -->
+        <text x="30" y="340" font-family="Inter,sans-serif" font-size="10" fill="#475569" letter-spacing="0.08em" font-weight="600">OUTPUT</text>
+
+        <!-- Lane dividers -->
+        <line x1="20" y1="60" x2="900" y2="60" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="20" y1="220" x2="900" y2="220" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="20" y1="310" x2="900" y2="310" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4 4"/>
+
+        <!-- ── INTAKE nodes ── -->
+        <!-- LangSmith box -->
+        <rect x="60" y="70" width="130" height="56" rx="8" fill="rgba(20,184,166,0.08)" stroke="rgba(20,184,166,0.4)" stroke-width="1.5"/>
+        <text x="125" y="94" font-family="Inter,sans-serif" font-size="11" fill="#f1f5f9" text-anchor="middle" font-weight="700">LangSmith</text>
+        <text x="125" y="112" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">Failed Runs</text>
+
+        <!-- Arrow right -->
+        <line x1="190" y1="98" x2="250" y2="98" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="250,93 260,98 250,103" fill="#475569"/>
+
+        <!-- Webhook/Poller box -->
+        <rect x="260" y="70" width="140" height="56" rx="8" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5"/>
+        <text x="330" y="91" font-family="Inter,sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">Webhook  /  Poller</text>
+        <text x="330" y="108" font-family="Inter,sans-serif" font-size="10.5" fill="#f1f5f9" text-anchor="middle" font-weight="600">/api/webhook</text>
+        <text x="330" y="122" font-family="Inter,sans-serif" font-size="9" fill="#64748b" text-anchor="middle">dedup by run_id · 60s poll</text>
+
+        <!-- Arrow down to classifier -->
+        <line x1="330" y1="126" x2="330" y2="158" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="325,158 330,168 335,158" fill="#475569"/>
+
+        <!-- ── PIPELINE nodes ── -->
+        <!-- Classifier -->
+        <rect x="220" y="168" width="220" height="68" rx="8" fill="rgba(20,184,166,0.08)" stroke="rgba(20,184,166,0.35)" stroke-width="1.5"/>
+        <text x="330" y="192" font-family="Inter,sans-serif" font-size="12" fill="#f1f5f9" text-anchor="middle" font-weight="700">① Classifier</text>
+        <text x="330" y="210" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">Groq → failure_type · severity</text>
+        <text x="330" y="226" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">title · root_cause_summary</text>
+
+        <!-- Arrow right to Patch Bot -->
+        <line x1="440" y1="202" x2="480" y2="202" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="480,197 490,202 480,207" fill="#475569"/>
+
+        <!-- Patch Bot -->
+        <rect x="490" y="168" width="220" height="68" rx="8" fill="rgba(167,139,250,0.07)" stroke="rgba(167,139,250,0.3)" stroke-width="1.5"/>
+        <text x="600" y="192" font-family="Inter,sans-serif" font-size="12" fill="#f1f5f9" text-anchor="middle" font-weight="700">② Patch Bot</text>
+        <text x="600" y="210" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">LangGraph: fetch_code →</text>
+        <text x="600" y="226" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">generate_fix → open_pr</text>
+
+        <!-- Arrow down from Patch Bot to Eval -->
+        <line x1="600" y1="236" x2="600" y2="260" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="595,260 600,270 605,260" fill="#475569"/>
+
+        <!-- Arrow down from Classifier to Eval -->
+        <line x1="330" y1="236" x2="330" y2="260" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="325,260 330,270 335,260" fill="#475569"/>
+
+        <!-- Eval Writer -->
+        <rect x="220" y="270" width="220" height="60" rx="8" fill="rgba(251,191,36,0.07)" stroke="rgba(251,191,36,0.25)" stroke-width="1.5"/>
+        <text x="330" y="296" font-family="Inter,sans-serif" font-size="12" fill="#f1f5f9" text-anchor="middle" font-weight="700">③ Eval Writer</text>
+        <text x="330" y="315" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">synthesize evaluator code + test input</text>
+
+        <!-- Shadow Runner -->
+        <rect x="490" y="270" width="220" height="60" rx="8" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.25)" stroke-width="1.5"/>
+        <text x="600" y="296" font-family="Inter,sans-serif" font-size="12" fill="#f1f5f9" text-anchor="middle" font-weight="700">④ Shadow Runner</text>
+        <text x="600" y="315" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">score_before vs score_after · auto-promote</text>
+
+        <!-- Arrow from Eval to Shadow -->
+        <line x1="440" y1="300" x2="490" y2="300" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="490,295 500,300 490,305" fill="#475569"/>
+
+        <!-- ── OUTPUT ── -->
+        <!-- Arrow down from Shadow to Dashboard -->
+        <line x1="600" y1="330" x2="600" y2="348" stroke="#475569" stroke-width="1.5"/>
+        <!-- Line left -->
+        <line x1="600" y1="348" x2="790" y2="348" stroke="#475569" stroke-width="1.5"/>
+        <!-- Arrow up to Dashboard? No, let's go right to GitHub and down to Dashboard -->
+        <!-- Arrow from Eval down to dashboard area -->
+        <line x1="330" y1="330" x2="330" y2="348" stroke="#475569" stroke-width="1.5"/>
+        <line x1="330" y1="348" x2="790" y2="348" stroke="#475569" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+        <!-- GitHub PR box -->
+        <rect x="720" y="168" width="160" height="56" rx="8" fill="rgba(74,222,128,0.07)" stroke="rgba(74,222,128,0.25)" stroke-width="1.5"/>
+        <text x="800" y="192" font-family="Inter,sans-serif" font-size="11" fill="#f1f5f9" text-anchor="middle" font-weight="700">GitHub PR</text>
+        <text x="800" y="210" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">auto-branch · diff · merge</text>
+
+        <!-- Arrow from Patch Bot to GitHub -->
+        <line x1="710" y1="202" x2="720" y2="202" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="720,197 730,202 720,207" fill="#475569"/>
+
+        <!-- Dashboard box (OUTPUT) -->
+        <rect x="680" y="320" width="200" height="46" rx="8" fill="rgba(20,184,166,0.1)" stroke="rgba(20,184,166,0.4)" stroke-width="1.5"/>
+        <text x="780" y="342" font-family="Inter,sans-serif" font-size="12" fill="#f1f5f9" text-anchor="middle" font-weight="700">⑤ Dashboard</text>
+        <text x="780" y="358" font-family="Inter,sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">human approve / reject PR</text>
+
+        <!-- Arrow from GitHub PR down to Dashboard -->
+        <line x1="800" y1="224" x2="800" y2="300" stroke="#475569" stroke-width="1.5"/>
+        <line x1="800" y1="300" x2="780" y2="300" stroke="#475569" stroke-width="1.5"/>
+        <line x1="780" y1="300" x2="780" y2="320" stroke="#475569" stroke-width="1.5"/>
+        <polygon points="775,320 780,320 785,320" fill="#475569"/>
+
+        <!-- LangSmith feedback loop (dashed) -->
+        <path d="M 800 366 Q 860 380 880 300 Q 900 220 130 140 Q 80 130 70 110" stroke="rgba(56,189,248,0.3)" stroke-width="1" stroke-dasharray="4 3" fill="none"/>
+        <text x="820" y="376" font-family="Inter,sans-serif" font-size="8.5" fill="rgba(56,189,248,0.5)">feedback scores written to LangSmith</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ── PIPELINE STEPS ── -->
+<section id="pipeline">
+  <div class="container">
+    <div class="section-label">⚙ How It Works</div>
+    <h2 class="section-title">Five stages, fully automated</h2>
+    <p class="section-sub">Each stage runs asynchronously with its own DB session. A crash in one stage doesn't cascade to the others.</p>
+
+    <div class="pipeline-grid">
+      <div class="pipeline-card">
+        <div class="pipeline-num">01</div>
+        <h3>Classify</h3>
+        <p>A Groq LLM (llama-3.3-70b-versatile) receives a truncated excerpt of the failing trace — inputs, outputs, error, and child_run names — and returns structured JSON: failure type, severity, title, description, root cause, and trace evidence quotes.</p>
+        <div class="tag-row">
+          <span class="tag">groq</span>
+          <span class="tag">llama-3.3-70b</span>
+          <span class="tag">JSON output</span>
+          <span class="tag sky">12k TPM safe</span>
+        </div>
+      </div>
+      <div class="pipeline-card">
+        <div class="pipeline-num">02</div>
+        <h3>Patch Bot</h3>
+        <p>A LangGraph state machine runs three nodes: <strong>fetch_code</strong> extracts real file paths from stack traces and pulls them from your GitHub repo; <strong>generate_fix</strong> produces a minimal targeted patch; <strong>open_pr</strong> creates a branch, commits, and opens a PR with explanation.</p>
+        <div class="tag-row">
+          <span class="tag purple">LangGraph</span>
+          <span class="tag">PyGitHub</span>
+          <span class="tag">real code</span>
+          <span class="tag sky">auto PR</span>
+        </div>
+      </div>
+      <div class="pipeline-card">
+        <div class="pipeline-num">03</div>
+        <h3>Eval Writer</h3>
+        <p>Groq synthesizes a LangSmith evaluator function — Python code you can add directly to your test suite. It includes a representative test input derived from the original failing trace and an expected output that the patched agent should produce.</p>
+        <div class="tag-row">
+          <span class="tag">groq</span>
+          <span class="tag">LangSmith eval</span>
+          <span class="tag sky">Python codegen</span>
+        </div>
+      </div>
+      <div class="pipeline-card">
+        <div class="pipeline-num">04</div>
+        <h3>Shadow Runner</h3>
+        <p>Groq-as-judge scores the original failing output and the patched expected output on a 0.0–1.0 quality scale. If the patched score is ≥10% better, the patch is auto-promoted. Both scores are written back to LangSmith as <code>traceguard/quality_before</code> and <code>traceguard/quality_after_patch</code> feedback.</p>
+        <div class="tag-row">
+          <span class="tag">A/B scoring</span>
+          <span class="tag">LangSmith feedback</span>
+          <span class="tag sky">auto-promote</span>
+        </div>
+      </div>
+      <div class="pipeline-card">
+        <div class="pipeline-num">05</div>
+        <h3>Dashboard Review</h3>
+        <p>The React dashboard shows every failure card with its classification, root cause, linked PR URL, diff, and shadow scores. <strong>Approve</strong> squash-merges the PR on GitHub and marks the failure resolved. <strong>Reject</strong> closes the PR with a comment. All state updates are pushed live over WebSocket.</p>
+        <div class="tag-row">
+          <span class="tag">React 19</span>
+          <span class="tag">WebSocket</span>
+          <span class="tag sky">human-in-loop</span>
+          <span class="tag purple">squash merge</span>
+        </div>
+      </div>
+      <div class="pipeline-card">
+        <div class="pipeline-num">+</div>
+        <h3>Crash Recovery</h3>
+        <p>On startup, TraceGuard scans for failures stuck in <code>classified</code> state (e.g. from a previous container crash) and re-queues them through the patch pipeline with a staggered 10-second delay between each to stay within Groq rate limits.</p>
+        <div class="tag-row">
+          <span class="tag">auto-resume</span>
+          <span class="tag">rate-limit safe</span>
+          <span class="tag sky">startup recovery</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TAXONOMY ── -->
+<section id="taxonomy">
+  <div class="container">
+    <div class="section-label">🗂 Failure Taxonomy</div>
+    <h2 class="section-title">10 classified failure types</h2>
+    <p class="section-sub">Every trace is mapped to one of these types. The taxonomy drives which patch strategy is applied and which evaluator is generated.</p>
+
+    <div class="taxonomy-grid">
+      <div class="taxonomy-card">
+        <div class="tax-name">infinite_loop</div>
+        <p>Agent or tool calling itself in a cycle with no exit condition</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">hallucination</div>
+        <p>Agent fabricated facts, citations, or data not present in context</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">tool_misuse</div>
+        <p>Wrong arguments, schema mismatch, or wrong tool chosen for task</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">context_overflow</div>
+        <p>Input exceeded the model's maximum context window limit</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">empty_response</div>
+        <p>Agent returned empty or null output with no fallback</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">format_error</div>
+        <p>Response did not match the required output schema or format</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">reasoning_failure</div>
+        <p>Chain-of-thought broke down, leading to a wrong conclusion</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">latency_regression</div>
+        <p>Response time degraded significantly from the established baseline</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">tool_timeout</div>
+        <p>External tool or API call timed out with no fallback strategy</p>
+      </div>
+      <div class="taxonomy-card">
+        <div class="tax-name">unknown</div>
+        <p>Failure could not be mapped to any known taxonomy type</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CAPABILITIES ── -->
+<section id="capabilities">
+  <div class="container">
+    <div class="section-label">✨ Capabilities</div>
+    <h2 class="section-title">Built for production from day one</h2>
+
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">🔗</div>
+        <div>
+          <h3>Real code discovery</h3>
+          <p>Patch Bot extracts file paths from stack traces, then walks your GitHub repo tree for agent entry-points if none are found. Falls back to illustrative placeholder code for offline/demo mode.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">⚡</div>
+        <div>
+          <h3>Groq inference — free tier friendly</h3>
+          <p>Uses llama-3.3-70b-versatile on Groq's free tier. All traces are truncated to stay within the 12k TPM limit. Swap the model via <code>GROQ_MODEL</code> env var.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔄</div>
+        <div>
+          <h3>WebSocket live feed</h3>
+          <p>Every pipeline event — failure classified, patch generated, eval written, shadow scored — is pushed to the dashboard instantly over a persistent WebSocket connection.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔐</div>
+        <div>
+          <h3>Optional API key auth</h3>
+          <p>Set <code>API_KEY</code> to protect write endpoints. <code>/api/webhook/langsmith</code> is intentionally open — LangSmith can't send custom headers. Frontend picks up the key from <code>VITE_API_KEY</code>.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🗄</div>
+        <div>
+          <h3>SQLite → PostgreSQL</h3>
+          <p>SQLite for local dev, PostgreSQL for production. Railway's plugin injects <code>DATABASE_URL</code> automatically. Alembic manages schema migrations on every deploy.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📊</div>
+        <div>
+          <h3>LangSmith feedback loop</h3>
+          <p>Shadow scores are written back to LangSmith as structured feedback (<code>traceguard/quality_before</code>, <code>traceguard/quality_after_patch</code>), closing the observability loop.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🤖</div>
+        <div>
+          <h3>LangGraph orchestration</h3>
+          <p>Patch Bot is a proper LangGraph <code>StateGraph</code> — each node gets the full typed state, errors are logged individually, and the graph is compiled once and reused.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🐳</div>
+        <div>
+          <h3>Docker Hub image</h3>
+          <p>Pre-built image published on every version tag. No Python setup required — just <code>docker run</code> with your env vars and you're live in under 60 seconds.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔁</div>
+        <div>
+          <h3>CI / CD pipeline</h3>
+          <p>GitHub Actions runs backend import checks and frontend TypeScript + build on every push. Docker Hub publish triggers on <code>v*</code> tags.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SCREENSHOTS ── -->
+<section id="screenshots">
+  <div class="container">
+    <div class="section-label">🖥 Dashboard</div>
+    <h2 class="section-title">Three views, one workflow</h2>
+    <p class="section-sub">Dark-theme React 19 UI with TanStack Query and live WebSocket updates.</p>
+
+    <div class="tabs" style="margin-top:2.5rem;">
+      <button class="tab active" onclick="showTab('dash')">Dashboard</button>
+      <button class="tab" onclick="showTab('patch')">Patch Review</button>
+      <button class="tab" onclick="showTab('eval')">Eval Vault</button>
+    </div>
+
+    <!-- Dashboard panel -->
+    <div class="screen-panel active" id="tab-dash">
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="dots"><div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div></div>
+          <div class="url-bar">traceguard-ai.vercel.app/dashboard</div>
+        </div>
+        <div class="browser-body">
+          <div class="mock-nav">
+            <div class="mock-nav-logo"><span style="width:8px;height:8px;border-radius:50%;background:#14b8a6;display:inline-block;"></span> TraceGuard AI</div>
+            <div class="mock-nav-links">
+              <span class="mock-nav-link active">Dashboard</span>
+              <span class="mock-nav-link">Patch Review</span>
+              <span class="mock-nav-link">Eval Vault</span>
+            </div>
+            <div class="mock-feed">● failure_classified · high</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-stats">
+              <div class="mock-stat-card"><div class="s-val">12</div><div class="s-lbl">Total Failures</div></div>
+              <div class="mock-stat-card crit"><div class="s-val">2</div><div class="s-lbl">Critical</div></div>
+              <div class="mock-stat-card high"><div class="s-val">5</div><div class="s-lbl">High</div></div>
+              <div class="mock-stat-card"><div class="s-val">9</div><div class="s-lbl">Patches</div></div>
+            </div>
+            <div class="sim-btns">
+              <div class="sim-btn">+ infinite loop</div>
+              <div class="sim-btn">+ hallucination</div>
+              <div class="sim-btn">+ tool misuse</div>
+              <div class="sim-btn">+ context overflow</div>
+              <div class="sim-btn">+ empty response</div>
+            </div>
+            <div class="mock-cards">
+              <div class="mock-card">
+                <div class="mock-card-top">
+                  <span class="sev critical">CRITICAL</span>
+                  <span class="mock-card-title">Infinite Loop Detected in Agent</span>
+                  <span class="mock-status patched">● patched</span>
+                </div>
+                <div class="mock-card-root">The agent entered an infinite loop by repeatedly calling search_tool without an exit condition, exhausting the iteration limit of 10. Root cause: missing max_iterations guard in the ReAct agent configuration.</div>
+                <div class="mock-evidence">"Agent stopped due to iteration limit of 10."</div>
+                <div class="mock-pr-row">
+                  <span class="pr-badge">PR open</span>
+                  <span class="pr-link">github.com/…/pull/42</span>
+                  <span style="font-size:0.7rem;color:var(--green);margin-left:auto;">↑ score +0.31</span>
+                </div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-top">
+                  <span class="sev high">HIGH</span>
+                  <span class="mock-card-title">Hallucinated Citation with Fake DOI</span>
+                  <span class="mock-status patched">● patched</span>
+                </div>
+                <div class="mock-card-root">Agent fabricated a research citation including a non-existent DOI and journal volume. No grounding instruction was present in the system prompt.</div>
+                <div class="mock-evidence">"Dr. Smith published this in Nature 2024 [doi:10.1038/fake-doi]"</div>
+                <div class="mock-pr-row">
+                  <span class="pr-badge">PR open</span>
+                  <span class="pr-link">github.com/…/pull/43</span>
+                  <span style="font-size:0.7rem;color:var(--green);margin-left:auto;">↑ score +0.22</span>
+                </div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-top">
+                  <span class="sev medium">MEDIUM</span>
+                  <span class="mock-card-title">Context Window Exceeded — 145K tokens</span>
+                  <span class="mock-status classified">◌ classified</span>
+                </div>
+                <div class="mock-card-root">Input to the model exceeded the 128K token context limit by 17K tokens. Full document was injected without chunking or summarization.</div>
+                <div class="mock-evidence">"maximum context length is 128000 tokens. Your messages resulted in 145230 tokens."</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patch Review panel -->
+    <div class="screen-panel" id="tab-patch">
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="dots"><div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div></div>
+          <div class="url-bar">traceguard-ai.vercel.app/patches</div>
+        </div>
+        <div class="browser-body">
+          <div class="mock-nav">
+            <div class="mock-nav-logo"><span style="width:8px;height:8px;border-radius:50%;background:#14b8a6;display:inline-block;"></span> TraceGuard AI</div>
+            <div class="mock-nav-links">
+              <span class="mock-nav-link">Dashboard</span>
+              <span class="mock-nav-link active">Patch Review</span>
+              <span class="mock-nav-link">Eval Vault</span>
+            </div>
+            <div class="mock-feed">● patch_generated</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-patch-card">
+              <div class="mock-patch-header">
+                <div>
+                  <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem;">agent/main_agent.py · code_fix</div>
+                  <div class="mock-patch-title">Fix: infinite_loop — add max_iterations guard to ReAct agent</div>
+                </div>
+                <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+                  <span class="mock-approve">✓ Approve &amp; Merge</span>
+                  <span class="mock-reject">✗ Reject</span>
+                </div>
+              </div>
+              <div class="mock-diff">
+<span class="diff-ctx"> def run_agent(query: str) -> str:</span>
+<span class="diff-ctx">     agent = create_react_agent(llm, tools)</span>
+<span class="diff-rem">-    return agent.invoke({"input": query})["output"]</span>
+<span class="diff-add">+    return agent.invoke(</span>
+<span class="diff-add">+        {"input": query},</span>
+<span class="diff-add">+        config={"recursion_limit": 10}</span>
+<span class="diff-add">+    )["output"]</span>
+</div>
+              <div style="padding:0.8rem 1rem;font-size:0.8rem;color:var(--muted);border-top:1px solid var(--border);">
+                Added <code style="color:var(--teal);">recursion_limit=10</code> to the agent invocation config to prevent unbounded tool call loops. Shadow score improved from <span style="color:var(--orange);">0.21</span> → <span style="color:var(--green);">0.82</span>.
+              </div>
+            </div>
+            <div class="mock-patch-card">
+              <div class="mock-patch-header">
+                <div>
+                  <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem;">agent/answer.py · prompt_rewrite</div>
+                  <div class="mock-patch-title">Fix: hallucination — add grounding instruction to system prompt</div>
+                </div>
+                <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+                  <span class="mock-approve">✓ Approve &amp; Merge</span>
+                  <span class="mock-reject">✗ Reject</span>
+                </div>
+              </div>
+              <div class="mock-diff">
+<span class="diff-ctx"> def answer(question: str, context: str) -> str:</span>
+<span class="diff-rem">-    return llm.invoke(f"{question}\n\nContext: {context}").content</span>
+<span class="diff-add">+    system = ("Only answer using facts present in the provided context. "</span>
+<span class="diff-add">+              "If the answer is not in the context, say 'I don't know.'")</span>
+<span class="diff-add">+    return llm.invoke([SystemMessage(system),</span>
+<span class="diff-add">+                       HumanMessage(f"{question}\n\nContext: {context}")]).content</span>
+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Eval Vault panel -->
+    <div class="screen-panel" id="tab-eval">
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="dots"><div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div></div>
+          <div class="url-bar">traceguard-ai.vercel.app/evals</div>
+        </div>
+        <div class="browser-body">
+          <div class="mock-nav">
+            <div class="mock-nav-logo"><span style="width:8px;height:8px;border-radius:50%;background:#14b8a6;display:inline-block;"></span> TraceGuard AI</div>
+            <div class="mock-nav-links">
+              <span class="mock-nav-link">Dashboard</span>
+              <span class="mock-nav-link">Patch Review</span>
+              <span class="mock-nav-link active">Eval Vault</span>
+            </div>
+            <div class="mock-feed">● eval_generated</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-eval-card">
+              <div class="mock-eval-top">
+                <span class="eval-name">eval_infinite_loop_guard</span>
+                <span class="auto-promo yes">auto-promoted ✓</span>
+              </div>
+              <div class="score-row">
+                <div class="score-item"><div class="score-val score-before">0.21</div><div class="score-lbl">Before patch</div></div>
+                <div class="score-arrow">→</div>
+                <div class="score-item"><div class="score-val score-after">0.82</div><div class="score-lbl">After patch</div></div>
+                <div class="score-item" style="margin-left:auto;"><div class="score-val" style="color:var(--teal);">+61%</div><div class="score-lbl">improvement</div></div>
+              </div>
+              <div class="eval-code">
+<span class="kw">def</span> <span class="fn">eval_infinite_loop_guard</span>(run, example):
+    <span class="cm"># Check agent respects iteration limit without crashing</span>
+    output = run.outputs.get(<span class="str">"output"</span>, <span class="str">""</span>)
+    <span class="kw">return</span> {<span class="str">"score"</span>: <span class="kw">int</span>(<span class="str">"iteration limit"</span> <span class="kw">not in</span> output)}
+              </div>
+            </div>
+            <div class="mock-eval-card">
+              <div class="mock-eval-top">
+                <span class="eval-name">eval_hallucination_grounding</span>
+                <span class="auto-promo yes">auto-promoted ✓</span>
+              </div>
+              <div class="score-row">
+                <div class="score-item"><div class="score-val score-before">0.35</div><div class="score-lbl">Before patch</div></div>
+                <div class="score-arrow">→</div>
+                <div class="score-item"><div class="score-val score-after">0.78</div><div class="score-lbl">After patch</div></div>
+                <div class="score-item" style="margin-left:auto;"><div class="score-val" style="color:var(--teal);">+43%</div><div class="score-lbl">improvement</div></div>
+              </div>
+              <div class="eval-code">
+<span class="kw">def</span> <span class="fn">eval_hallucination_grounding</span>(run, example):
+    <span class="cm"># Verify no fabricated DOIs or citations in output</span>
+    output = run.outputs.get(<span class="str">"output"</span>, <span class="str">""</span>)
+    <span class="kw">return</span> {<span class="str">"score"</span>: <span class="kw">int</span>(<span class="str">"doi:10.1038/fake"</span> <span class="kw">not in</span> output)}
+              </div>
+            </div>
+            <div class="mock-eval-card">
+              <div class="mock-eval-top">
+                <span class="eval-name">eval_context_chunking</span>
+                <span class="auto-promo no">pending review</span>
+              </div>
+              <div class="score-row">
+                <div class="score-item"><div class="score-val score-before">0.00</div><div class="score-lbl">Before patch</div></div>
+                <div class="score-arrow">→</div>
+                <div class="score-item"><div class="score-val score-after">0.65</div><div class="score-lbl">After patch</div></div>
+                <div class="score-item" style="margin-left:auto;"><div class="score-val" style="color:var(--teal);">+65%</div><div class="score-lbl">improvement</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SETUP ── -->
+<section id="setup">
+  <div class="container">
+    <div class="section-label">🚀 Setup</div>
+    <h2 class="section-title">Live in production in under 10 minutes</h2>
+    <p class="section-sub">Three paths depending on your use case.</p>
+
+    <div class="setup-tabs" style="margin-top:2.5rem;">
+      <button class="setup-tab active" onclick="showSetup('docker')">🐳 Docker Hub</button>
+      <button class="setup-tab" onclick="showSetup('local')">💻 Local Dev</button>
+      <button class="setup-tab" onclick="showSetup('railway')">🚂 Railway + Vercel</button>
+    </div>
+
+    <!-- Docker Hub -->
+    <div class="setup-panel active" id="setup-docker">
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="setup-n">1</div>
+          <div style="flex:1;">
+            <h4>Run the backend</h4>
+            <pre><span class="cm"># Fastest path — no clone required</span>
+docker run -d \
+  -e <span class="var">GROQ_API_KEY</span>=gsk_... \
+  -e <span class="var">LANGCHAIN_API_KEY</span>=lsv2_... \
+  -e <span class="var">LANGCHAIN_PROJECT</span>=traceguard-ai \
+  -e <span class="var">GITHUB_TOKEN</span>=ghp_... \
+  -e <span class="var">GITHUB_REPO</span>=your-org/your-agent-repo \
+  -e <span class="var">DATABASE_URL</span>=postgresql://user:pass@host:5432/db \
+  -e <span class="var">API_KEY</span>=your-secret \
+  -e <span class="var">CORS_ORIGINS</span>=http://localhost:5173 \
+  -p 8000:8000 \
+  saurabh-oss/traceguard-ai:latest</pre>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">2</div>
+          <div style="flex:1;">
+            <h4>Test it</h4>
+            <pre>curl -X POST http://localhost:8000/api/webhook/simulate \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"X-API-Key: your-secret"</span> \
+  -d <span class="str">'{"failure_hint": "infinite_loop"}'</span>
+
+<span class="cm"># Expected: {"status":"simulated","failure_id":"..."}</span>
+<span class="cm"># Watch Railway logs — pipeline runs in ~30 seconds</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Dev -->
+    <div class="setup-panel" id="setup-local">
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="setup-n">1</div>
+          <div style="flex:1;">
+            <h4>Clone and configure backend</h4>
+            <pre>git clone https://github.com/saurabh-oss/traceguard-ai
+cd traceguard-ai/backend
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+<span class="cm"># Edit .env — set GROQ_API_KEY at minimum</span></pre>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">2</div>
+          <div style="flex:1;">
+            <h4>Start the backend</h4>
+            <pre>uvicorn app.main:app --reload --port 8000</pre>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">3</div>
+          <div style="flex:1;">
+            <h4>Start the frontend (new terminal)</h4>
+            <pre>cd frontend
+npm install
+npm run dev
+<span class="cm"># → http://localhost:5173</span></pre>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">4</div>
+          <div style="flex:1;">
+            <h4>Fire a demo failure</h4>
+            <pre>curl -X POST http://localhost:8000/api/webhook/simulate \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"failure_hint": "hallucination"}'</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Railway + Vercel -->
+    <div class="setup-panel" id="setup-railway">
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="setup-n">1</div>
+          <div style="flex:1;">
+            <h4>Deploy backend to Railway</h4>
+            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.8rem;">Railway → New Project → Deploy from GitHub → select <code style="color:var(--teal);">traceguard-ai</code>. Add a PostgreSQL plugin — Railway injects <code style="color:var(--teal);">DATABASE_URL</code> automatically.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">2</div>
+          <div style="flex:1;">
+            <h4>Set Railway environment variables</h4>
+            <table class="env-table">
+              <thead><tr><th>Variable</th><th>Value</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><code>GROQ_API_KEY</code></td><td>Your Groq key from console.groq.com</td><td><span class="req">required</span></td></tr>
+                <tr><td><code>LANGCHAIN_API_KEY</code></td><td>Your LangSmith key</td><td><span class="req">required</span></td></tr>
+                <tr><td><code>LANGCHAIN_PROJECT</code></td><td>traceguard-ai</td><td><span class="req">required</span></td></tr>
+                <tr><td><code>GITHUB_TOKEN</code></td><td>GitHub PAT with <code>repo</code> scope</td><td><span class="opt">for PRs</span></td></tr>
+                <tr><td><code>GITHUB_REPO</code></td><td>your-org/your-agent-repo</td><td><span class="opt">for PRs</span></td></tr>
+                <tr><td><code>API_KEY</code></td><td>Strong random secret</td><td><span class="opt">recommended</span></td></tr>
+                <tr><td><code>CORS_ORIGINS</code></td><td>Your Vercel frontend URL</td><td><span class="opt">recommended</span></td></tr>
+                <tr><td><code>SECRET_KEY</code></td><td><code>openssl rand -hex 32</code></td><td><span class="opt">recommended</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">3</div>
+          <div style="flex:1;">
+            <h4>Deploy frontend to Vercel</h4>
+            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.8rem;">Vercel → Add New Project → import <code style="color:var(--teal);">traceguard-ai</code>. Set Root Directory to <code style="color:var(--teal);">frontend</code>. Add two env vars:</p>
+            <pre>VITE_API_URL=https://your-railway-url.up.railway.app
+VITE_API_KEY=same-value-as-API_KEY-in-railway</pre>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-n">4</div>
+          <div style="flex:1;">
+            <h4>Connect LangSmith webhook</h4>
+            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.8rem;">LangSmith → your project → Settings → Webhooks → Add Webhook:</p>
+            <pre>URL:     https://your-railway-url.up.railway.app/api/webhook/langsmith
+Trigger: Run Failed</pre>
+            <p style="color:var(--muted);font-size:0.82rem;margin-top:0.6rem;">Every failed run in your LangSmith project now flows into TraceGuard automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LINKS ── -->
+<section id="links">
+  <div class="container">
+    <div class="section-label">🔗 Resources</div>
+    <h2 class="section-title">Everything you need</h2>
+
+    <div class="links-grid">
+      <a class="link-card" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">
+        <div class="link-icon">⭐</div>
+        <h3>Main Repository</h3>
+        <p>Full source — FastAPI backend, LangGraph agents, React 19 frontend, Docker + Railway config.</p>
+        <div class="link-arrow">github.com/saurabh-oss/traceguard-ai →</div>
+      </a>
+      <a class="link-card" href="https://github.com/saurabh-oss/traceguard-demo-agent" target="_blank">
+        <div class="link-icon">🤖</div>
+        <h3>Demo Agent Repo</h3>
+        <p>Companion repo with 5 failure scenarios you can fire against your TraceGuard instance to see the full pipeline in action.</p>
+        <div class="link-arrow">github.com/saurabh-oss/traceguard-demo-agent →</div>
+      </a>
+      <a class="link-card" href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">
+        <div class="link-icon">🐳</div>
+        <h3>Docker Hub</h3>
+        <p>Pre-built image. Run the full backend with a single <code>docker run</code> — no Python environment needed.</p>
+        <div class="link-arrow">hub.docker.com/r/saurabh-oss/traceguard-ai →</div>
+      </a>
+      <a class="link-card" href="https://github.com/saurabh-oss/traceguard-ai/blob/main/CONTRIBUTING.md" target="_blank">
+        <div class="link-icon">🛠</div>
+        <h3>Contributing Guide</h3>
+        <p>How to set up a local dev environment, add new failure types, and submit PRs.</p>
+        <div class="link-arrow">CONTRIBUTING.md →</div>
+      </a>
+      <a class="link-card" href="https://console.groq.com" target="_blank">
+        <div class="link-icon">⚡</div>
+        <h3>Get a Groq API Key</h3>
+        <p>Free tier. No credit card required. Fast enough to run the full pipeline in under 30 seconds per failure.</p>
+        <div class="link-arrow">console.groq.com →</div>
+      </a>
+      <a class="link-card" href="https://smith.langchain.com" target="_blank">
+        <div class="link-icon">🔭</div>
+        <h3>LangSmith</h3>
+        <p>Connect your existing LangSmith project to TraceGuard via webhook. Every failed run becomes a tracked failure automatically.</p>
+        <div class="link-arrow">smith.langchain.com →</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="foot-logo">● TraceGuard AI</div>
+  <div class="foot-links">
+    <a href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">GitHub</a>
+    <a href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">Docker Hub</a>
+    <a href="https://github.com/saurabh-oss/traceguard-demo-agent" target="_blank">Demo Agent</a>
+    <a href="https://github.com/saurabh-oss/traceguard-ai/blob/main/CONTRIBUTING.md" target="_blank">Contribute</a>
+  </div>
+  <p>MIT License · Built with LangGraph, Groq, FastAPI, and React 19</p>
+</footer>
+
+<script>
+  function showTab(name) {
+    document.querySelectorAll('.screen-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function showSetup(name) {
+    document.querySelectorAll('.setup-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.setup-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('setup-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // Smooth active nav link highlight on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a:not(.nav-btn)');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + current ? 'var(--teal)' : '';
+    });
+  });
+</script>
+</body>
+</html>
