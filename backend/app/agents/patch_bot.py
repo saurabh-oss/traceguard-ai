@@ -137,6 +137,7 @@ Generate minimal targeted fix."""
                       "explanation": fix.get("explanation", ""),
                       "diff": fix.get("diff", "")})
     else:
+        log.error("generate_fix_node: no JSON in LLM response: %s", resp.content[:300])
         state["error"] = "Could not parse fix from LLM"
     return state
 
@@ -216,6 +217,7 @@ async def run_patch_bot_async(failure_id: str):
         await broadcast({"event": "patch_generated", "failure_id": failure_id,
                          "patch_id": patch.id, "pr_url": patch.pr_url})
     except Exception as e:
+        log.error("run_patch_bot_async FAILED for %s: %s", failure_id, e, exc_info=True)
         await broadcast({"event": "patch_error", "failure_id": failure_id, "error": str(e)})
     finally:
         db.close()

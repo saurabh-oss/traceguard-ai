@@ -1,4 +1,4 @@
-import uuid
+import uuid, logging
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from app.db.database import get_db, SessionLocal
@@ -9,6 +9,8 @@ from app.eval_writer.eval_synthesizer import synthesize_eval_async
 from app.shadow_runner.shadow_runner import run_shadow_eval_async
 from app.api.ws import broadcast
 from app.api.auth import require_api_key
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 
@@ -33,15 +35,22 @@ async def process_trace(failure_id: str, trace: dict):
         await broadcast({"event": "failure_classified", "failure_id": failure_id,
                          "failure_type": failure.failure_type, "severity": failure.severity})
         # 2. Patch bot (opens its own session internally)
+        log.info("process_trace: starting patch bot for %s", failure_id)
         await run_patch_bot_async(failure_id)
+        log.info("process_trace: patch bot done for %s", failure_id)
         # 3. Synthesize eval (opens its own session internally)
+        log.info("process_trace: starting eval synthesizer for %s", failure_id)
         await synthesize_eval_async(failure_id)
+        log.info("process_trace: eval synthesizer done for %s", failure_id)
         # 4. Shadow runner — find the eval case just created
         from app.models.eval_case import EvalCase
         db.expire_all()
         ec_list = db.query(EvalCase).filter(EvalCase.failure_id == failure_id).all()
         if ec_list:
+            log.info("process_trace: starting shadow runner for %s", failure_id)
             await run_shadow_eval_async(ec_list[-1].id)
+    except Exception as e:
+        log.error("process_trace FAILED for %s: %s", failure_id, e, exc_info=True)
     finally:
         db.close()
 
