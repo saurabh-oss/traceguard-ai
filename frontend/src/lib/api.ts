@@ -1,6 +1,10 @@
 import axios from 'axios'
 const _base = import.meta.env.VITE_API_URL ?? ''
-export const api = axios.create({ baseURL: _base })
+const _key  = import.meta.env.VITE_API_KEY ?? ''
+export const api = axios.create({
+  baseURL: _base,
+  headers: _key ? { 'X-API-Key': _key } : {},
+})
 export const wsUrl = _base
   ? _base.replace(/^http/, 'ws') + '/ws'
   : `ws://${location.host}/ws`
