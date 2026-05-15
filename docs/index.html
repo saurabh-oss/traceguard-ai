@@ -61,11 +61,13 @@
     .nav-links { display: flex; gap: 1.8rem; align-items: center; }
     .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight:500; transition: color .2s; }
     .nav-links a:hover { color: var(--text); }
+    .nav-links a.nav-btn,
     .nav-btn {
-      background: var(--teal); color: #020817; padding: 0.4rem 1.1rem;
+      background: var(--teal); color: #020817 !important; padding: 0.4rem 1.1rem;
       border-radius: 6px; font-size: 0.85rem; font-weight: 700;
       text-decoration: none; transition: background .2s;
     }
+    .nav-links a.nav-btn:hover,
     .nav-btn:hover { background: #2dd4bf; color: #020817 !important; }
 
     /* ── SECTIONS ── */
@@ -139,7 +141,8 @@
 
     /* ── PROBLEM ── */
     #problem { background: var(--bg2); }
-    .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+    .problem-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 3rem; }
+    @media (max-width: 640px) { .problem-grid { grid-template-columns: 1fr; } }
     .problem-card {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 12px; padding: 1.8rem; position: relative; overflow: hidden;
@@ -400,7 +403,8 @@
 
     /* ── LINKS ── */
     #links { background: var(--bg2); }
-    .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.2rem; margin-top: 3rem; }
+    .links-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-top: 3rem; }
+    @media (max-width: 700px) { .links-grid { grid-template-columns: 1fr; } }
     .link-card {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 12px; padding: 1.5rem;
@@ -471,7 +475,7 @@
     <a class="btn-ghost" href="#setup">
       → Quick Setup
     </a>
-    <a class="btn-ghost" href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">
+    <a class="btn-ghost" href="https://hub.docker.com/r/sauvast/traceguard-ai" target="_blank">
       🐳 Docker Hub
     </a>
   </div>
@@ -1148,7 +1152,7 @@ docker run -d \
   -e <span class="var">API_KEY</span>=your-secret \
   -e <span class="var">CORS_ORIGINS</span>=http://localhost:5173 \
   -p 8000:8000 \
-  saurabh-oss/traceguard-ai:latest</pre>
+  sauvast/traceguard-ai:latest</pre>
           </div>
         </div>
         <div class="setup-step">
@@ -1283,11 +1287,11 @@ Trigger: Run Failed</pre>
         <p>Companion repo with 5 failure scenarios you can fire against your TraceGuard instance to see the full pipeline in action.</p>
         <div class="link-arrow">github.com/saurabh-oss/traceguard-demo-agent →</div>
       </a>
-      <a class="link-card" href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">
+      <a class="link-card" href="https://hub.docker.com/r/sauvast/traceguard-ai" target="_blank">
         <div class="link-icon">🐳</div>
         <h3>Docker Hub</h3>
         <p>Pre-built image. Run the full backend with a single <code>docker run</code> — no Python environment needed.</p>
-        <div class="link-arrow">hub.docker.com/r/saurabh-oss/traceguard-ai →</div>
+        <div class="link-arrow">hub.docker.com/r/sauvast/traceguard-ai →</div>
       </a>
       <a class="link-card" href="https://github.com/saurabh-oss/traceguard-ai/blob/main/CONTRIBUTING.md" target="_blank">
         <div class="link-icon">🛠</div>
@@ -1316,7 +1320,7 @@ Trigger: Run Failed</pre>
   <div class="foot-logo">● TraceGuard AI</div>
   <div class="foot-links">
     <a href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">GitHub</a>
-    <a href="https://hub.docker.com/r/saurabh-oss/traceguard-ai" target="_blank">Docker Hub</a>
+    <a href="https://hub.docker.com/r/sauvast/traceguard-ai" target="_blank">Docker Hub</a>
     <a href="https://github.com/saurabh-oss/traceguard-demo-agent" target="_blank">Demo Agent</a>
     <a href="https://github.com/saurabh-oss/traceguard-ai/blob/main/CONTRIBUTING.md" target="_blank">Contribute</a>
   </div>

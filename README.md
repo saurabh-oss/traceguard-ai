@@ -84,7 +84,7 @@ docker run -d \
   -e CORS_ORIGINS=https://your-frontend.vercel.app \
   -e API_KEY=your-secret-key \
   -p 8000:8000 \
-  saurabh-oss/traceguard-ai:latest
+  sauvast/traceguard-ai:latest
 ```
 
 Backend runs at `http://localhost:8000`. All config is via environment variables — no config files needed.
