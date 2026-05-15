@@ -67,7 +67,7 @@
   <!-- ── Tagline ── -->
   <text x="88" y="422" font-size="22" font-weight="400"
         fill="rgba(148,163,184,0.85)" letter-spacing="0.1">
-    Detect failing traces · Generate patch PRs · Evaluate &amp; approve — automatically.
+    Detect failing traces · Generate patch PRs · Evaluate &amp; approve  -  automatically.
   </text>
 
   <!-- ── Pipeline steps ── -->
