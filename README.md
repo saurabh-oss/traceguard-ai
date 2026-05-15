@@ -149,21 +149,70 @@ With both servers running, open the Dashboard and click any simulate button:
 
 Click any card to expand it: root cause, trace evidence, linked patch with PR URL, and shadow scores are all shown inline.
 
-### Fire all 5 scenarios at once
+### Fire all 5 scenarios at once (demo agent)
+
+Clone the companion repo and run it against your TraceGuard instance:
+
 ```bash
-cd backend
-source .venv/bin/activate
-python ../scripts/run_demo_agent.py
+git clone https://github.com/saurabh-oss/traceguard-demo-agent
+cd traceguard-demo-agent
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export LANGCHAIN_API_KEY=lsv2_your-key
+export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_PROJECT=traceguard-ai
+export GROQ_API_KEY=gsk_your-key
+PYTHONPATH=. python scripts/run_failures.py
 ```
+
+Traces appear in LangSmith; TraceGuard's poller picks them up within 60 s.
 
 ---
 
-## Connecting Real LangSmith Engine
+## Connecting Real LangSmith
 
-1. In LangSmith → **Settings → Webhooks**
-2. Add URL: `https://your-domain.com/api/webhook/langsmith`
-3. Event type: **Run** (or Engine-surfaced failures)
-4. TraceGuard will classify and patch every flagged run automatically
+### 1. Create a LangSmith account
+
+Sign up free at [smith.langchain.com](https://smith.langchain.com), create a project named **`traceguard-ai`**, and generate an API key under **Settings → API Keys**.
+
+### 2. Add the webhook
+
+In LangSmith → your project → **Settings → Webhooks → Add Webhook**:
+
+| Field | Value |
+|---|---|
+| URL | `https://your-backend-domain/api/webhook/langsmith` |
+| Trigger | **Run Failed** |
+
+Every failed LangSmith run now flows into TraceGuard automatically.
+
+---
+
+## Production Deployment
+
+### Backend → Railway
+
+1. [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → select `traceguard-ai`
+2. Railway auto-detects the root `Dockerfile`
+3. Add a **PostgreSQL** plugin: Railway injects `DATABASE_URL` automatically
+4. Set these **Variables** in Railway:
+
+| Variable | Value |
+|---|---|
+| `GROQ_API_KEY` | your Groq key |
+| `LANGCHAIN_API_KEY` | your LangSmith key |
+| `LANGCHAIN_PROJECT` | `traceguard-ai` |
+| `SECRET_KEY` | any random string (`openssl rand -hex 32`) |
+| `CORS_ORIGINS` | your Vercel frontend URL |
+
+5. Railway gives you a public URL like `https://traceguard-ai-production.up.railway.app`
+
+### Frontend → Vercel
+
+1. [vercel.com](https://vercel.com) → **Add New Project** → import `traceguard-ai`
+2. Set **Root Directory** to `frontend`
+3. Add environment variable: `VITE_API_URL=https://your-railway-url`
+4. Deploy
 
 ---
 
