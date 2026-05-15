@@ -15,16 +15,20 @@ async def lifespan(app: FastAPI):
     from app.models.failure import Failure, FailureStatus
     from app.api.webhook import process_trace
     asyncio.create_task(start_poller())
-    # Re-queue any failures that were mid-pipeline when the server last restarted
-    db = SessionLocal()
-    try:
-        stuck = db.query(Failure).filter(
-            Failure.status == FailureStatus.classified
-        ).all()
-        for f in stuck:
-            asyncio.create_task(process_trace(f.id, f.raw_trace or {}))
-    finally:
-        db.close()
+    # Re-queue failures stuck mid-pipeline, staggered to avoid Groq burst
+    async def _resume_stuck():
+        await asyncio.sleep(5)  # let server finish starting up first
+        db = SessionLocal()
+        try:
+            stuck = db.query(Failure).filter(
+                Failure.status == FailureStatus.classified
+            ).all()
+            for i, f in enumerate(stuck):
+                await asyncio.sleep(i * 10)  # 10s gap between each re-queued task
+                asyncio.create_task(process_trace(f.id, f.raw_trace or {}))
+        finally:
+            db.close()
+    asyncio.create_task(_resume_stuck())
     yield
 
 app = FastAPI(title="TraceGuard AI", version="1.0.0", lifespan=lifespan)
