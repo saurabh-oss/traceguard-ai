@@ -6,7 +6,7 @@ TraceGuard AI sits one layer above [LangSmith Engine](https://smith.langchain.co
 
 > "LangSmith Engine gives you the smoke detector. TraceGuard AI is the automatic sprinkler system."
 
-[![CI](https://github.com/your-username/traceguard-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/traceguard-ai/actions/workflows/ci.yml)
+[![CI](https://github.com/saurabh-oss/traceguard-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/saurabh-oss/traceguard-ai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 
 ---
@@ -78,7 +78,7 @@ LangSmith Engine
 
 ### 1. Clone
 ```bash
-git clone https://github.com/your-username/traceguard-ai
+git clone https://github.com/saurabh-oss/traceguard-ai
 cd traceguard-ai
 ```
 
