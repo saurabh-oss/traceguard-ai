@@ -9,7 +9,12 @@ from app.api.ws import connect, disconnect
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Schema is managed by Alembic (run via `alembic upgrade head` in Dockerfile CMD)
+    # Belt-and-suspenders: create any tables Alembic may have skipped
+    from app.db.database import engine, Base
+    import app.models.failure   # noqa: F401
+    import app.models.patch     # noqa: F401
+    import app.models.eval_case  # noqa: F401
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     from app.langsmith_poller import start_poller
     from app.db.database import SessionLocal
     from app.models.failure import Failure, FailureStatus
