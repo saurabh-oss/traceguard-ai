@@ -1,13 +1,16 @@
 import axios from 'axios'
-const _base = import.meta.env.VITE_API_URL ?? ''
+const _base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')   // strip trailing slash
 const _key  = import.meta.env.VITE_API_KEY ?? ''
 export const api = axios.create({
   baseURL: _base,
   headers: _key ? { 'X-API-Key': _key } : {},
 })
-export const wsUrl = _base
-  ? _base.replace(/^http/, 'ws') + '/ws'
-  : `ws://${location.host}/ws`
+// Explicit WS URL override takes priority; otherwise derive from API URL or fall back to same host
+export const wsUrl: string =
+  import.meta.env.VITE_WS_URL ??
+  (_base
+    ? _base.replace(/^https/, 'wss').replace(/^http(?!s)/, 'ws') + '/ws'
+    : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
 export const getFailures  = () => api.get('/api/failures').then(r => r.data)
 export const getPatches   = () => api.get('/api/patches').then(r => r.data)
 export const getEvals     = () => api.get('/api/evals').then(r => r.data)
