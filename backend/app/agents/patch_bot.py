@@ -146,7 +146,7 @@ Generate minimal targeted fix."""
                                HumanMessage(content=human_msg)])
     m = re.search(r"\{[\s\S]*\}", resp.content)
     if m:
-        fix = json.loads(m.group())
+        fix = json.loads(m.group(), strict=False)
         state.update({"patch_type":   fix.get("patch_type", "code_fix"),
                       "original_code": state.get("repo_code", ""),
                       "patched_code":  fix.get("patched_code", ""),
