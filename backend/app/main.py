@@ -1,8 +1,10 @@
-import asyncio, json, time
+import asyncio, json, logging, time
 from collections import defaultdict
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+log = logging.getLogger(__name__)
 from app.config import settings
 from app.models import failure, patch, eval_case   # noqa: F401 — register models with SQLAlchemy
 from app.api import failures, patches, evals, webhook, stats
@@ -89,11 +91,19 @@ app.include_router(stats.router)
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await connect(ws)
+    log.info("WebSocket connected: %s", ws.client)
     try:
         while True:
-            await ws.receive_text()
+            msg = await ws.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
     except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        log.warning("WebSocket error: %s", e)
+    finally:
         disconnect(ws)
+        log.info("WebSocket disconnected: %s", ws.client)
 
 @app.get("/health")
 def health():
