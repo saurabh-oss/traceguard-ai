@@ -1,4 +1,4 @@
-import logging
+import asyncio, logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -6,6 +6,7 @@ from app.models.patch import Patch, PatchStatus
 from app.models.failure import Failure, FailureStatus
 from app.config import settings
 from app.api.auth import require_api_key
+from app.agents.patch_bot import run_patch_bot_async
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/patches", tags=["patches"])
@@ -71,7 +72,7 @@ def approve_patch(patch_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{patch_id}/reject", dependencies=[Depends(require_api_key)])
-def reject_patch(patch_id: str, body: dict = {}, db: Session = Depends(get_db)):
+async def reject_patch(patch_id: str, body: dict = {}, db: Session = Depends(get_db)):
     patch = db.query(Patch).filter(Patch.id == patch_id).first()
     if not patch:
         raise HTTPException(404)
@@ -85,7 +86,7 @@ def reject_patch(patch_id: str, body: dict = {}, db: Session = Depends(get_db)):
                 pr = repo.get_pull(patch.pr_number)
                 comment = "❌ **Rejected by TraceGuard AI human reviewer.**"
                 if notes:
-                    comment += f"\n\n**Reason:** {notes}"
+                    comment += f"\n\n**Reason:** {notes}\n\n_TraceGuard will generate a revised fix._"
                 pr.create_issue_comment(comment)
                 pr.edit(state="closed")
                 github_result = {"closed": True}
@@ -96,6 +97,13 @@ def reject_patch(patch_id: str, body: dict = {}, db: Session = Depends(get_db)):
     patch.status = PatchStatus.rejected
     patch.reviewer_notes = notes
     db.commit()
+
+    # If reviewer left notes, re-run the patch bot with that context
+    if notes and patch.failure_id:
+        asyncio.create_task(run_patch_bot_async(patch.failure_id, rejection_context=notes))
+        return {"status": "rejected", "patch_id": patch_id,
+                "github": github_result, "retry": "re-patching with reviewer notes"}
+
     return {"status": "rejected", "patch_id": patch_id, "github": github_result}
 
 

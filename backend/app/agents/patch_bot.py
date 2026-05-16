@@ -53,8 +53,10 @@ class PatchState(TypedDict):
     failure_type: str
     root_cause: str
     trace_json: dict
+    rejection_context: Optional[str]   # notes from a previous human rejection
     repo_code: Optional[str]
     file_path: Optional[str]
+    file_patches: Optional[list]       # [{file_path, patched_code}] for multi-file fixes
     patch_type: Optional[str]
     original_code: Optional[str]
     patched_code: Optional[str]
@@ -113,13 +115,27 @@ async def generate_fix_node(state: PatchState) -> PatchState:
     llm = ChatGroq(model=settings.groq_model, temperature=0.2,
                    api_key=settings.groq_api_key)
     sys_msg = """You are TraceGuard AI Patch Bot. Return ONLY valid JSON:
-{"patch_type":"prompt_rewrite|code_fix|guard_insertion",
- "patched_code":"complete fixed code",
- "explanation":"what was changed and why",
- "diff":"unified diff"}"""
+{
+  "patch_type": "prompt_rewrite|code_fix|guard_insertion",
+  "patched_code": "complete fixed code for the primary file",
+  "file_patches": [{"file_path": "other/file.py", "patched_code": "..."}],
+  "explanation": "what was changed and why",
+  "diff": "unified diff"
+}
+file_patches lists any additional files that need changes beyond the primary file.
+Omit file_patches or leave it empty if only one file needs changing."""
+
+    rejection_note = ""
+    if state.get("rejection_context"):
+        rejection_note = (
+            f"\n\nPREVIOUS FIX WAS REJECTED BY A HUMAN REVIEWER.\n"
+            f"Reviewer notes: {state['rejection_context']}\n"
+            f"You MUST address these concerns in the new fix."
+        )
+
     human_msg = f"""Failure: {state['failure_type']}
 Root cause: {state['root_cause']}
-File: {state.get('file_path')}
+Primary file: {state.get('file_path')}{rejection_note}
 
 Current code:
 ```python
@@ -131,11 +147,12 @@ Generate minimal targeted fix."""
     m = re.search(r"\{[\s\S]*\}", resp.content)
     if m:
         fix = json.loads(m.group())
-        state.update({"patch_type": fix.get("patch_type", "code_fix"),
+        state.update({"patch_type":   fix.get("patch_type", "code_fix"),
                       "original_code": state.get("repo_code", ""),
-                      "patched_code": fix.get("patched_code", ""),
-                      "explanation": fix.get("explanation", ""),
-                      "diff": fix.get("diff", "")})
+                      "patched_code":  fix.get("patched_code", ""),
+                      "file_patches":  fix.get("file_patches") or [],
+                      "explanation":   fix.get("explanation", ""),
+                      "diff":          fix.get("diff", "")})
     else:
         log.error("generate_fix_node: no JSON in LLM response: %s", resp.content[:300])
         state["error"] = "Could not parse fix from LLM"
@@ -146,19 +163,51 @@ async def open_pr_node(state: PatchState) -> PatchState:
     state["branch_name"] = branch
     if settings.github_token and settings.github_repo and state.get("patched_code"):
         try:
-            from github import Github
+            from github import Github, InputGitTreeElement
             g = Github(settings.github_token)
             repo = g.get_repo(settings.github_repo)
-            base = repo.default_branch
-            sha = repo.get_branch(base).commit.sha
-            repo.create_git_ref(f"refs/heads/{branch}", sha)
-            f = repo.get_contents(state.get("file_path", "agent.py"), ref=base)
-            repo.update_file(state.get("file_path"), f"fix: TraceGuard auto-patch",
-                             state.get("patched_code", ""), f.sha, branch=branch)
+            base_branch = repo.default_branch
+            base_sha = repo.get_branch(base_branch).commit.sha
+            base_tree = repo.get_git_commit(base_sha).tree
+
+            # Collect all file changes: primary + any additional files
+            all_patches = [{"file_path": state.get("file_path"), "patched_code": state.get("patched_code", "")}]
+            for fp in (state.get("file_patches") or []):
+                if fp.get("file_path") and fp.get("patched_code"):
+                    all_patches.append(fp)
+
+            # Build a single Git tree with all changes — one clean commit
+            tree_elements = [
+                InputGitTreeElement(path=p["file_path"], mode="100644",
+                                    type="blob", content=p["patched_code"])
+                for p in all_patches if p.get("file_path")
+            ]
+            new_tree = repo.create_git_tree(tree_elements, base_tree)
+            rejection_prefix = "fix(retry): " if state.get("rejection_context") else "fix: "
+            commit = repo.create_git_commit(
+                message=f"{rejection_prefix}TraceGuard auto-patch [{state['failure_type']}]",
+                tree=new_tree,
+                parents=[repo.get_git_commit(base_sha)]
+            )
+            repo.create_git_ref(f"refs/heads/{branch}", commit.sha)
+
+            files_changed = ", ".join(p["file_path"] for p in all_patches if p.get("file_path"))
+            rejection_section = ""
+            if state.get("rejection_context"):
+                rejection_section = (
+                    f"\n\n---\n**Retry** - previous fix was rejected.\n"
+                    f"**Reviewer notes addressed:** {state['rejection_context']}"
+                )
             pr = repo.create_pull(
                 title=f"[TraceGuard] Fix: {state['failure_type']}",
-                body=f"**Auto-generated by TraceGuard AI**\n\n{state.get('explanation', '')}\n\n> Requires human approval.",
-                head=branch, base=base)
+                body=(
+                    f"**Auto-generated by TraceGuard AI**\n\n"
+                    f"{state.get('explanation', '')}\n\n"
+                    f"**Files changed:** `{files_changed}`"
+                    f"{rejection_section}\n\n"
+                    f"> Requires human approval."
+                ),
+                head=branch, base=base_branch)
             state["pr_url"] = pr.html_url
             state["pr_number"] = pr.number
         except Exception as e:
@@ -171,7 +220,7 @@ async def open_pr_node(state: PatchState) -> PatchState:
         if not settings.github_token: missing.append("GITHUB_TOKEN")
         if not settings.github_repo:  missing.append("GITHUB_REPO")
         if not state.get("patched_code"): missing.append("patched_code")
-        log.warning("open_pr_node skipped — missing: %s", ", ".join(missing))
+        log.warning("open_pr_node skipped - missing: %s", ", ".join(missing))
         state["pr_url"] = f"https://github.com/sandbox/repo/pull/{branch[-8:]}"
     return state
 
@@ -186,7 +235,7 @@ def build_patch_graph():
     g.add_edge("open_pr",      END)
     return g.compile()
 
-async def run_patch_bot_async(failure_id: str):
+async def run_patch_bot_async(failure_id: str, rejection_context: str = ""):
     db = SessionLocal()
     try:
         failure = db.query(Failure).filter(Failure.id == failure_id).first()
@@ -197,10 +246,11 @@ async def run_patch_bot_async(failure_id: str):
             "failure_id": failure_id, "failure_type": failure.failure_type or "unknown",
             "root_cause": failure.root_cause_summary or "",
             "trace_json": failure.raw_trace or {},
-            "repo_code": None, "file_path": None, "patch_type": None,
-            "original_code": None, "patched_code": None, "explanation": None,
-            "diff": None, "pr_url": None, "pr_number": None,
-            "branch_name": None, "error": None,
+            "rejection_context": rejection_context or None,
+            "repo_code": None, "file_path": None, "file_patches": None,
+            "patch_type": None, "original_code": None, "patched_code": None,
+            "explanation": None, "diff": None, "pr_url": None,
+            "pr_number": None, "branch_name": None, "error": None,
         })
         patch = Patch(failure_id=failure_id, patch_type=result.get("patch_type"),
                       file_path=result.get("file_path"),

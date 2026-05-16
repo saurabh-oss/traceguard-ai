@@ -3,26 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TraceGuard AI - Autonomous Quality Firewall for LLM Agents</title>
-  <meta name="description" content="TraceGuard AI detects, classifies, patches, and evaluates LLM agent failures automatically. Built on LangSmith, LangGraph, and Groq." />
+  <title>TraceGuard AI - From failure alert to merged fix, automatically</title>
+  <meta name="description" content="TraceGuard AI is the remediation layer for LLM agent failures. Alert in, merged patch PR out. Works with LangSmith, Langfuse, or any monitoring tool." />
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
-  <meta property="og:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes - automatically. Built on LangGraph, Groq, and LangSmith." />
+  <meta property="og:title" content="TraceGuard AI - From failure alert to merged fix, automatically" />
+  <meta property="og:description" content="The remediation layer for LLM agent failures. Works with LangSmith, Langfuse, or any monitoring tool. Alert in, merged patch PR out." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://saurabh-oss.github.io/traceguard-ai/" />
   <meta property="og:image" content="https://saurabh-oss.github.io/traceguard-ai/og.svg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
+  <meta property="og:image:alt" content="TraceGuard AI - The remediation layer for LLM agent failures" />
 
   <!-- Twitter / X Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="TraceGuard AI - Autonomous Quality Firewall for LLM Agents" />
-  <meta name="twitter:description" content="Detects failing traces, generates patch PRs, writes evaluators, and scores fixes - automatically." />
+  <meta name="twitter:title" content="TraceGuard AI - From failure alert to merged fix, automatically" />
+  <meta name="twitter:description" content="The remediation layer for LLM agent failures. Works with LangSmith, Langfuse, or any tool. Alert in, merged patch PR out." />
   <meta name="twitter:image" content="https://saurabh-oss.github.io/traceguard-ai/og.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -477,12 +477,12 @@
   <div class="hero-grid"></div>
   <div class="hero-badge"><span class="pulse"></span> Now live on Railway + Vercel</div>
   <h1 class="hero-title">
-    Autonomous Quality Firewall<br/>
-    <span class="grad">for LLM Agents</span>
+    From failure alert<br/>
+    <span class="grad">to merged fix</span>
   </h1>
   <p class="hero-sub">
-    TraceGuard AI watches your LangSmith traces, detects failures, generates a patch PR,
-    writes an evaluator, and scores the fix - all before your on-call engineer wakes up.
+    LangSmith tells you something broke. TraceGuard AI fixes it - fetching your real code,
+    generating a patch PR, and scoring the fix before you ever look at it.
   </p>
   <div class="hero-buttons">
     <a class="btn-primary" href="https://github.com/saurabh-oss/traceguard-ai" target="_blank">
@@ -496,10 +496,10 @@
     </a>
   </div>
   <div class="hero-stats">
+    <div class="hero-stat"><div class="num">3</div><div class="lbl">Intake connectors (LangSmith, Langfuse, generic)</div></div>
+    <div class="hero-stat"><div class="num">&lt;60s</div><div class="lbl">From alert to patch PR</div></div>
     <div class="hero-stat"><div class="num">10</div><div class="lbl">Failure types classified</div></div>
-    <div class="hero-stat"><div class="num">&lt;60s</div><div class="lbl">From failure to patch PR</div></div>
-    <div class="hero-stat"><div class="num">5</div><div class="lbl">Pipeline stages</div></div>
-    <div class="hero-stat"><div class="num">0</div><div class="lbl">Manual steps to detect</div></div>
+    <div class="hero-stat"><div class="num">0</div><div class="lbl">Manual steps to ship a fix</div></div>
   </div>
 </section>
 
@@ -507,29 +507,29 @@
 <section id="problem">
   <div class="container">
     <div class="section-label">⚠ The Problem</div>
-    <h2 class="section-title">LLM agents fail silently and expensively</h2>
-    <p class="section-sub">Production AI agents hallucinate, loop, overflow context, and return empty responses - often without anyone noticing until a user complains.</p>
+    <h2 class="section-title">Observability stops at the alert</h2>
+    <p class="section-sub">Your monitoring tool tells you something broke. Everything after that - root cause, fix, test, PR, review - is still entirely manual.</p>
 
     <div class="problem-grid">
       <div class="problem-card">
-        <div class="problem-icon">🔍</div>
-        <h3>You can't watch every trace</h3>
-        <p>LangSmith gives you observability - but sifting through thousands of traces to find the failing ones, then understanding why, is a full-time job you don't have budget for.</p>
+        <div class="problem-icon">🚨</div>
+        <h3>The alert is just the beginning</h3>
+        <p>LangSmith, Langfuse, and Helicone tell you a run failed. Finding which file caused it, understanding why, writing a fix, and opening a PR is still entirely your problem.</p>
       </div>
       <div class="problem-card">
         <div class="problem-icon">🌊</div>
-        <h3>Failures compound silently</h3>
-        <p>An infinite loop bug in your agent doesn't crash the server - it just burns API credits and returns degraded answers. By the time you notice, you've racked up thousands of bad responses.</p>
+        <h3>Failures compound between deploys</h3>
+        <p>An infinite loop or hallucination bug doesn't crash anything - it silently burns credits and returns bad answers until someone notices and the manual fix cycle begins.</p>
       </div>
       <div class="problem-card">
         <div class="problem-icon">⏱</div>
-        <h3>Manual debugging is slow</h3>
-        <p>Reproducing LLM failures is hard. The trace is gone, the context window is stale, and writing a regression test requires understanding the failure type - work that takes hours, not minutes.</p>
+        <h3>The fix cycle takes hours</h3>
+        <p>Reproduce the failure, find the file, write the patch, open a PR, add a regression test - for every single incident. This is toil that compounds as your agent usage grows.</p>
       </div>
       <div class="problem-card">
-        <div class="problem-icon">🤔</div>
-        <h3>Fixes are hard to validate</h3>
-        <p>Even after a patch, how do you know the fix actually worked? Running a shadow eval against the original failing trace requires infra you probably haven't built yet.</p>
+        <div class="problem-icon">🔁</div>
+        <h3>Rejected fixes restart from zero</h3>
+        <p>A reviewer rejects your patch with notes. Those notes live in a GitHub comment. The next iteration starts from scratch - no memory of what was tried, what failed, or why.</p>
       </div>
     </div>
   </div>
@@ -539,32 +539,31 @@
 <section id="solution">
   <div class="container">
     <div class="section-label">💡 The Solution</div>
-    <h2 class="section-title">A self-healing immune system for your agents</h2>
+    <h2 class="section-title">The missing remediation layer</h2>
 
     <div class="quote-box">
-      <span>"LangSmith Engine gives you the smoke detector.</span>
-      TraceGuard AI is the automatic sprinkler system."
+      Observability tools are <span>read-only</span> - they surface failures and stop there.
+      TraceGuard AI is <span>read-write</span> - it changes your code.
     </div>
 
     <div class="solution-row">
       <div>
         <p style="color:var(--muted);font-size:1rem;line-height:1.8;margin-bottom:1.5rem;">
-          TraceGuard AI runs as a background service alongside your LangSmith project.
-          It polls for failed runs, classifies each failure against a 10-type taxonomy,
-          dispatches a LangGraph agent to fetch your code and generate a targeted fix,
-          auto-writes a regression evaluator, and scores the patch against the original
-          trace - all before you've had your first coffee.
+          When a failure alert arrives from LangSmith, Langfuse, or any monitoring tool,
+          TraceGuard classifies the root cause, dispatches a LangGraph agent to fetch
+          your actual code from GitHub, generates a targeted multi-file fix, and opens
+          a PR - all in under 60 seconds.
         </p>
         <p style="color:var(--muted);font-size:1rem;line-height:1.8;">
-          A human remains in the loop for the final approval: every fix surfaces as a
-          GitHub PR with an explanation, diff, and shadow eval score. You click Approve - it merges.
-          You click Reject - it closes. No terminal required.
+          If you reject a fix with notes, the patch bot reads your feedback and
+          generates a revised PR automatically. You stay in the loop for final approval -
+          everything else is handled.
         </p>
       </div>
       <div class="solution-steps">
         <div class="step-item">
           <div class="step-num">1</div>
-          <div><h4>Detect</h4><p>LangSmith webhook or 60-second poller surfaces failed runs automatically.</p></div>
+          <div><h4>Receive</h4><p>Failure arrives via LangSmith webhook, Langfuse webhook, or generic ingest endpoint.</p></div>
         </div>
         <div class="step-item">
           <div class="step-num">2</div>
@@ -572,15 +571,15 @@
         </div>
         <div class="step-item">
           <div class="step-num">3</div>
-          <div><h4>Patch</h4><p>LangGraph agent fetches your real code from GitHub and generates a minimal targeted fix.</p></div>
+          <div><h4>Patch</h4><p>LangGraph agent fetches your real code from GitHub and generates a multi-file fix in a single clean commit.</p></div>
         </div>
         <div class="step-item">
           <div class="step-num">4</div>
-          <div><h4>Evaluate</h4><p>Groq-as-judge scores output quality before and after the patch on a 0–1 scale.</p></div>
+          <div><h4>Validate</h4><p>Groq-as-judge scores the fix quality before you approve. Scores are written back to LangSmith.</p></div>
         </div>
         <div class="step-item">
           <div class="step-num">5</div>
-          <div><h4>Approve</h4><p>Dashboard shows PR, diff, and scores. One click to merge or reject.</p></div>
+          <div><h4>Approve or retry</h4><p>One click to merge. Reject with notes and the bot generates a revised fix addressing your feedback.</p></div>
         </div>
       </div>
     </div>
@@ -843,10 +842,17 @@
 
     <div class="cap-grid">
       <div class="cap-card">
-        <div class="cap-icon">🔗</div>
+        <div class="cap-icon">🔌</div>
         <div>
-          <h3>Real code discovery</h3>
-          <p>Patch Bot extracts file paths from stack traces, then walks your GitHub repo tree for agent entry-points if none are found. Falls back to illustrative placeholder code for offline/demo mode.</p>
+          <h3>Three intake connectors</h3>
+          <p>Native support for LangSmith and Langfuse webhooks. A generic <code>/ingest</code> endpoint accepts normalized failures from Helicone, Arize, custom scripts, or any tool that can fire an HTTP POST.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔁</div>
+        <div>
+          <h3>Rejection learning</h3>
+          <p>Reject a PR with reviewer notes and the patch bot reads your feedback, incorporating it into a revised fix - automatically. No restarting from scratch; the context carries forward.</p>
         </div>
       </div>
       <div class="cap-card">
@@ -889,6 +895,13 @@
         <div>
           <h3>LangGraph orchestration</h3>
           <p>Patch Bot is a proper LangGraph <code>StateGraph</code> - each node gets the full typed state, errors are logged individually, and the graph is compiled once and reused.</p>
+        </div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📂</div>
+        <div>
+          <h3>Multi-file patches</h3>
+          <p>The patch bot fixes multiple files in a single clean Git commit - system prompt, tool definition, and agent runner in one PR. No piecemeal commits, no rebasing.</p>
         </div>
       </div>
       <div class="cap-card">

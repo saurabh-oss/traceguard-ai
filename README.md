@@ -1,32 +1,43 @@
 # TraceGuard AI
 
-> **Autonomous Quality Firewall for LLM Agents — Powered by LangSmith**
+> **The remediation layer for LLM agent failures**
 
-TraceGuard AI sits one layer above [LangSmith Engine](https://smith.langchain.com) and acts as a self-healing immune system for your AI agents. When a failure is detected, it automatically classifies it, generates a targeted code fix, writes an evaluator, runs a shadow deployment, and opens a PR — all without human intervention until the final approval step.
+LangSmith tells you something broke. TraceGuard AI fixes it.
 
-> "LangSmith Engine gives you the smoke detector. TraceGuard AI is the automatic sprinkler system."
+When a failure alert arrives — from LangSmith, Langfuse, or any monitoring tool — TraceGuard fetches your real code from GitHub, generates a targeted patch, opens a PR, and scores the fix before you ever look at it. You review and click Approve. That's it.
 
 [![CI](https://github.com/saurabh-oss/traceguard-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/saurabh-oss/traceguard-ai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 
 ---
 
-## How It Works
+## The gap TraceGuard fills
+
+Observability tools (LangSmith, Langfuse, Helicone) are read-only — they surface failures but stop there. The next step — understanding the root cause, finding the right file, writing a fix, testing it, opening a PR — is still entirely manual.
+
+TraceGuard is the read-write layer that closes that loop automatically.
 
 ```
-LangSmith Engine
-      │
-      ▼  webhook  /  simulate endpoint
-┌──────────────────────────────────────────────────┐
-│                  TraceGuard AI                   │
-│                                                  │
-│  1. Classify    → maps trace to failure type     │
-│  2. Patch Bot   → LangGraph agent generates PR   │
-│  3. Eval Writer → auto-creates LangSmith eval    │
-│  4. Shadow Run  → A/B score before vs after      │
-│  5. Dashboard   → human approve / reject PR      │
-└──────────────────────────────────────────────────┘
+Your monitoring tool          TraceGuard AI
+(LangSmith / Langfuse /  ──►  ┌─────────────────────────────────┐
+ Helicone / custom)           │  1. Classify  → failure type     │
+                              │  2. Patch Bot → fetch + fix + PR │
+                              │  3. Validate  → score the fix    │
+                              │  4. Approve   → one-click merge  │
+                              └─────────────────────────────────┘
 ```
+
+### What makes it different from the observability tools
+
+| | LangSmith / Langfuse | TraceGuard AI |
+|---|---|---|
+| Surface failures | ✅ | reads from them |
+| Root cause analysis | partial | ✅ structured taxonomy |
+| **Fetch your real code** | ❌ | ✅ |
+| **Generate a patch PR** | ❌ | ✅ LangGraph agent |
+| **Multi-file fixes** | ❌ | ✅ single clean commit |
+| **Retry with reviewer notes** | ❌ | ✅ rejection learning |
+| Human approve / reject | annotation UI | ✅ → GitHub merge/close |
 
 ### Failure Taxonomy (10 types)
 
@@ -193,22 +204,50 @@ Traces appear in LangSmith; TraceGuard's poller picks them up within 60 s.
 
 ---
 
-## Connecting Real LangSmith
+## Connecting your monitoring tool
 
-### 1. Create a LangSmith account
+TraceGuard accepts failures from any source via three intake endpoints.
 
-Sign up free at [smith.langchain.com](https://smith.langchain.com), create a project named **`traceguard-ai`**, and generate an API key under **Settings → API Keys**.
-
-### 2. Add the webhook
+### LangSmith
 
 In LangSmith → your project → **Settings → Webhooks → Add Webhook**:
 
 | Field | Value |
 |---|---|
-| URL | `https://your-backend-domain/api/webhook/langsmith` |
+| URL | `https://your-backend/api/webhook/langsmith` |
 | Trigger | **Run Failed** |
 
-Every failed LangSmith run now flows into TraceGuard automatically. This endpoint is intentionally auth-free — LangSmith webhooks cannot send custom headers.
+This endpoint is intentionally auth-free — LangSmith webhooks cannot send custom headers.
+
+### Langfuse
+
+In Langfuse → **Settings → Webhooks → Add Webhook**:
+
+| Field | Value |
+|---|---|
+| URL | `https://your-backend/api/webhook/langfuse` |
+| Event | **trace.created** or **observation.created** |
+
+TraceGuard extracts the error from `observations[].statusMessage` automatically.
+
+### Generic / custom (any tool)
+
+Send a POST to `/api/webhook/ingest` with your `X-API-Key` header:
+
+```bash
+curl -X POST https://your-backend/api/webhook/ingest \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "run_id": "optional-dedup-id",
+    "name":   "my-agent",
+    "error":  "Agent stopped due to iteration limit of 10.",
+    "inputs": {"query": "what is the capital of France?"},
+    "source": "helicone"
+  }'
+```
+
+This works with Helicone, Arize, custom alerting scripts, or any tool that can fire an HTTP POST on failure.
 
 ---
 
@@ -311,9 +350,11 @@ traceguard-ai/
 | `GET` | `/api/patches` | No | List all patches |
 | `GET` | `/api/patches/{id}` | No | Get one patch |
 | `POST` | `/api/patches/{id}/approve` | Yes | Squash-merge PR, mark resolved |
-| `POST` | `/api/patches/{id}/reject` | Yes | Close PR, mark rejected |
+| `POST` | `/api/patches/{id}/reject` | Yes | Close PR, re-patch if notes provided |
 | `GET` | `/api/evals` | No | List all eval cases with scores |
-| `POST` | `/api/webhook/langsmith` | No | Real LangSmith webhook receiver |
+| `POST` | `/api/webhook/langsmith` | No | LangSmith webhook receiver |
+| `POST` | `/api/webhook/langfuse` | No | Langfuse webhook receiver |
+| `POST` | `/api/webhook/ingest` | Yes | Generic intake (any tool) |
 | `POST` | `/api/webhook/simulate` | Yes | Inject a demo failure |
 | `WS` | `/ws` | No | Live event stream |
 

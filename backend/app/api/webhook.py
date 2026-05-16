@@ -69,6 +69,77 @@ async def langsmith_webhook(payload: dict, bg: BackgroundTasks, db: Session = De
     bg.add_task(process_trace, failure.id, payload)
     return {"status": "accepted", "failure_id": failure.id}
 
+@router.post("/ingest")
+async def ingest_failure(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db),
+                         _: None = Depends(require_api_key)):
+    """Generic intake endpoint — accepts failures from any monitoring tool (Langfuse, Helicone, custom).
+
+    Expected payload (all fields optional except at least one of error/outputs):
+      run_id, name, error, inputs, outputs, latency_ms, child_runs, source
+    """
+    run_id = payload.get("run_id") or payload.get("id")
+    if run_id:
+        existing = db.query(Failure).filter(Failure.run_id == run_id).first()
+        if existing:
+            return {"status": "duplicate", "failure_id": existing.id}
+    trace = {
+        "id":         run_id,
+        "name":       payload.get("name", "unknown"),
+        "inputs":     payload.get("inputs", payload.get("input", {})),
+        "outputs":    payload.get("outputs", payload.get("output", {})),
+        "error":      payload.get("error", ""),
+        "child_runs": payload.get("child_runs", []),
+        "latency_ms": payload.get("latency_ms"),
+    }
+    failure = Failure(raw_trace=trace, run_id=run_id, status=FailureStatus.new)
+    db.add(failure)
+    db.commit()
+    db.refresh(failure)
+    bg.add_task(process_trace, failure.id, trace)
+    source = payload.get("source", "generic")
+    return {"status": "accepted", "failure_id": failure.id, "source": source}
+
+
+@router.post("/langfuse")
+async def langfuse_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
+    """Langfuse webhook receiver.
+
+    Langfuse sends: {"type": "...", "data": {"id": ..., "name": ..., "input": ...,
+                      "output": ..., "observations": [...]}}
+    We surface the first observation with a non-empty statusMessage as the error.
+    """
+    data = payload.get("data", payload)
+    run_id = data.get("id")
+    if run_id:
+        existing = db.query(Failure).filter(Failure.run_id == run_id).first()
+        if existing:
+            return {"status": "duplicate", "failure_id": existing.id}
+
+    # Extract error from observations (Langfuse stores errors in statusMessage)
+    error_text = ""
+    for obs in (data.get("observations") or []):
+        msg = obs.get("statusMessage") or obs.get("status_message", "")
+        if msg:
+            error_text = msg
+            break
+
+    trace = {
+        "id":         run_id,
+        "name":       data.get("name", "unknown"),
+        "inputs":     data.get("input", {}),
+        "outputs":    data.get("output", {}),
+        "error":      error_text or data.get("statusMessage", ""),
+        "child_runs": [],
+        "latency_ms": data.get("latency"),
+    }
+    failure = Failure(raw_trace=trace, run_id=run_id, status=FailureStatus.new)
+    db.add(failure)
+    db.commit()
+    db.refresh(failure)
+    bg.add_task(process_trace, failure.id, trace)
+    return {"status": "accepted", "failure_id": failure.id}
+
+
 @router.post("/simulate")
 async def simulate_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
     """Simulate a failure for demo/testing — injects a realistic trace."""
