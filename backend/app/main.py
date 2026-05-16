@@ -1,40 +1,48 @@
-import asyncio, time
+import asyncio, json, time
 from collections import defaultdict
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.models import failure, patch, eval_case   # noqa: F401 — register models with SQLAlchemy
 from app.api import failures, patches, evals, webhook, stats
 from app.api.ws import connect, disconnect
 
-# Simple in-process rate limiter for webhook endpoints
-class _RateLimiter(BaseHTTPMiddleware):
-    _LIMITS = {
-        "/api/webhook/simulate": (10, 60),   # 10 req / 60 s
-        "/api/webhook/ingest":   (60, 60),   # 60 req / 60 s
-        "/api/webhook/langsmith":(120, 60),
-        "/api/webhook/langfuse": (120, 60),
-        "/api/webhook/helicone": (120, 60),
-        "/api/webhook/arize":    (120, 60),
-    }
+_RATE_LIMITS = {
+    "/api/webhook/simulate": (10,  60),
+    "/api/webhook/ingest":   (60,  60),
+    "/api/webhook/langsmith":(120, 60),
+    "/api/webhook/langfuse": (120, 60),
+    "/api/webhook/helicone": (120, 60),
+    "/api/webhook/arize":    (120, 60),
+}
+
+class _RateLimiter:
+    """Pure ASGI middleware — skips WebSocket scopes entirely so WS upgrades are never blocked."""
     def __init__(self, app):
-        super().__init__(app)
+        self.app  = app
         self._hits: dict[str, list[float]] = defaultdict(list)
 
-    async def dispatch(self, request: Request, call_next):
-        limit = self._LIMITS.get(request.url.path)
-        if limit and request.method == "POST":
-            calls, period = limit
-            key = f"{request.client.host if request.client else 'unknown'}:{request.url.path}"
-            now = time.time()
-            self._hits[key] = [t for t in self._hits[key] if now - t < period]
-            if len(self._hits[key]) >= calls:
-                return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
-            self._hits[key].append(now)
-        return await call_next(request)
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            path   = scope.get("path", "")
+            method = scope.get("method", "")
+            limit  = _RATE_LIMITS.get(path)
+            if limit and method == "POST":
+                calls, period = limit
+                client = scope.get("client")
+                ip     = client[0] if client else "unknown"
+                key    = f"{ip}:{path}"
+                now    = time.time()
+                self._hits[key] = [t for t in self._hits[key] if now - t < period]
+                if len(self._hits[key]) >= calls:
+                    body = json.dumps({"detail": "Rate limit exceeded"}).encode()
+                    await send({"type": "http.response.start", "status": 429,
+                                "headers": [[b"content-type", b"application/json"]]})
+                    await send({"type": "http.response.body", "body": body})
+                    return
+                self._hits[key].append(now)
+        await self.app(scope, receive, send)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
