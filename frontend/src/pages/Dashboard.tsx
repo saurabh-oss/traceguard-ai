@@ -26,12 +26,10 @@ const DEMOS = ['infinite_loop', 'hallucination', 'tool_misuse', 'context_overflo
 
 function Sparkline({ data }: { data: { date: string; count: number }[] }) {
   const max = Math.max(...data.map(d => d.count), 1)
-  const W = 480, H = 56, pad = 4
-  const barW = Math.floor((W - pad * (data.length + 1)) / data.length)
   return (
     <div className="flex items-end gap-1 overflow-x-auto">
       {data.map((d, i) => {
-        const h = Math.max(Math.round((d.count / max) * H), d.count > 0 ? 4 : 2)
+        const h = Math.max(Math.round((d.count / max) * 56), d.count > 0 ? 4 : 2)
         return (
           <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-[36px]">
             <span className="text-xs text-teal-400">{d.count > 0 ? d.count : ''}</span>
