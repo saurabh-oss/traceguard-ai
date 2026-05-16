@@ -111,19 +111,84 @@ async def fetch_code_node(state: PatchState) -> PatchState:
     state["file_path"] = "agent/main_agent.py"
     return state
 
+def _parse_fix_response(text: str) -> dict | None:
+    """Parse the structured LLM response using XML-style delimiters.
+    Falls back to JSON extraction if delimiters are absent."""
+    # Primary: delimited format (code never lives inside a JSON string)
+    pc = re.search(r"<PATCHED_CODE>\n?([\s\S]*?)\n?</PATCHED_CODE>", text)
+    if pc:
+        pt_m = re.search(r"^PATCH_TYPE:\s*(.+)$", text, re.M)
+        ex_m = re.search(r"^EXPLANATION:\s*(.+)$", text, re.M)
+        df_m = re.search(r"<DIFF>\n?([\s\S]*?)\n?</DIFF>", text)
+        fp_m = re.search(r"<FILE_PATCHES>\n?([\s\S]*?)\n?</FILE_PATCHES>", text)
+        file_patches = []
+        if fp_m:
+            try:
+                file_patches = json.loads(fp_m.group(1).strip())
+            except Exception:
+                pass
+        return {
+            "patch_type":  (pt_m.group(1).strip() if pt_m else "code_fix"),
+            "patched_code": pc.group(1),
+            "explanation":  (ex_m.group(1).strip() if ex_m else ""),
+            "diff":         (df_m.group(1) if df_m else ""),
+            "file_patches": file_patches,
+        }
+
+    # Fallback: JSON extraction with multi-pass sanitization
+    m = re.search(r"\{[\s\S]*\}", text)
+    if not m:
+        return None
+    raw = m.group()
+    for parser in (
+        lambda s: json.loads(s, strict=False),
+        lambda s: json.loads(_sanitize_json(s)),
+        lambda s: json.loads(_sanitize_json(s), strict=False),
+    ):
+        try:
+            return parser(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+    return None
+
+
+def _sanitize_json(raw: str) -> str:
+    """Escape literal newlines/tabs inside JSON string values via a simple state machine."""
+    out, in_str, i = [], False, 0
+    while i < len(raw):
+        ch = raw[i]
+        if ch == "\\" and in_str and i + 1 < len(raw):
+            out.append(ch); out.append(raw[i + 1]); i += 2; continue
+        if ch == '"':
+            in_str = not in_str; out.append(ch)
+        elif in_str and ch == "\n":
+            out.append("\\n")
+        elif in_str and ch == "\r":
+            out.append("\\r")
+        elif in_str and ch == "\t":
+            out.append("\\t")
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 async def generate_fix_node(state: PatchState) -> PatchState:
     llm = ChatGroq(model=settings.groq_model, temperature=0.2,
                    api_key=settings.groq_api_key)
-    sys_msg = """You are TraceGuard AI Patch Bot. Return ONLY valid JSON:
-{
-  "patch_type": "prompt_rewrite|code_fix|guard_insertion",
-  "patched_code": "complete fixed code for the primary file",
-  "file_patches": [{"file_path": "other/file.py", "patched_code": "..."}],
-  "explanation": "what was changed and why",
-  "diff": "unified diff"
-}
-file_patches lists any additional files that need changes beyond the primary file.
-Omit file_patches or leave it empty if only one file needs changing."""
+    sys_msg = """You are TraceGuard AI Patch Bot. Reply in EXACTLY this format — no JSON, no markdown fences:
+
+PATCH_TYPE: [prompt_rewrite|code_fix|guard_insertion]
+EXPLANATION: [one sentence describing what changed and why]
+<PATCHED_CODE>
+[complete fixed code for the primary file, verbatim — no escaping needed]
+</PATCHED_CODE>
+<DIFF>
+[unified diff]
+</DIFF>
+<FILE_PATCHES>
+[JSON array of additional files that need changes: [{"file_path": "...", "patched_code": "..."}], or empty array []]
+</FILE_PATCHES>"""
 
     rejection_note = ""
     if state.get("rejection_context"):
@@ -144,17 +209,16 @@ Current code:
 Generate minimal targeted fix."""
     resp = await llm.ainvoke([SystemMessage(content=sys_msg),
                                HumanMessage(content=human_msg)])
-    m = re.search(r"\{[\s\S]*\}", resp.content)
-    if m:
-        fix = json.loads(m.group(), strict=False)
-        state.update({"patch_type":   fix.get("patch_type", "code_fix"),
+    fix = _parse_fix_response(resp.content)
+    if fix:
+        state.update({"patch_type":    fix.get("patch_type", "code_fix"),
                       "original_code": state.get("repo_code", ""),
                       "patched_code":  fix.get("patched_code", ""),
                       "file_patches":  fix.get("file_patches") or [],
                       "explanation":   fix.get("explanation", ""),
                       "diff":          fix.get("diff", "")})
     else:
-        log.error("generate_fix_node: no JSON in LLM response: %s", resp.content[:300])
+        log.error("generate_fix_node: could not parse LLM response: %s", resp.content[:400])
         state["error"] = "Could not parse fix from LLM"
     return state
 
