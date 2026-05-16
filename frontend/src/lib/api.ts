@@ -16,3 +16,4 @@ export const rejectPatch  = (id: string, notes: string) =>
   api.post(`/api/patches/${id}/reject`, { notes })
 export const simulateFailure = (hint: string) =>
   api.post('/api/webhook/simulate', { failure_hint: hint })
+export const getStats = () => api.get('/api/stats').then(r => r.data)

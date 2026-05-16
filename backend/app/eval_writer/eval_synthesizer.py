@@ -1,7 +1,6 @@
 import json, re
-from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
-from app.config import settings
+from app.llm import get_llm
 from app.db.database import SessionLocal
 from app.models.failure import Failure
 from app.models.eval_case import EvalCase
@@ -22,8 +21,7 @@ async def synthesize_eval_async(failure_id: str):
         failure = db.query(Failure).filter(Failure.id == failure_id).first()
         if not failure:
             return
-        llm = ChatGroq(model=settings.groq_model, temperature=0.2,
-                       api_key=settings.groq_api_key)
+        llm = get_llm(temperature=0.2)
         resp = await llm.ainvoke([
             SystemMessage(content=SYS),
             HumanMessage(content=f"Failure type: {failure.failure_type}\n"

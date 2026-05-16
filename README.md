@@ -70,13 +70,14 @@ Your monitoring tool          TraceGuard AI
 | Layer | Tools |
 |---|---|
 | Agent Orchestration | LangGraph, LangChain Core |
-| LLM Provider | Groq (`llama-3.3-70b-versatile`) |
+| LLM Provider | Groq / OpenAI / Anthropic (switchable via `LLM_PROVIDER`) |
 | Backend API | FastAPI + Uvicorn, Python 3.12 |
-| Database | SQLite (dev) → PostgreSQL (prod) |
+| Database | SQLite (dev) - PostgreSQL (prod) |
 | Real-time | WebSocket push |
 | Frontend | React 19 + Vite + Tailwind CSS v4 |
 | GitHub Integration | PyGitHub (auto PR creation + merge/close) |
 | Containers | Docker + Docker Compose |
+| Notifications | Slack incoming webhook |
 
 ---
 
@@ -206,7 +207,7 @@ Traces appear in LangSmith; TraceGuard's poller picks them up within 60 s.
 
 ## Connecting your monitoring tool
 
-TraceGuard accepts failures from any source via three intake endpoints.
+TraceGuard accepts failures from any source via named endpoints for each tool.
 
 ### LangSmith
 
@@ -230,6 +231,28 @@ In Langfuse → **Settings → Webhooks → Add Webhook**:
 
 TraceGuard extracts the error from `observations[].statusMessage` automatically.
 
+### Helicone
+
+In Helicone → **Settings → Webhooks → Add Webhook**:
+
+| Field | Value |
+|---|---|
+| URL | `https://your-backend/api/webhook/helicone` |
+| Event | **Request** |
+
+TraceGuard only processes requests with a non-empty `error` field or a `statusCode >= 400`.
+
+### Arize Phoenix
+
+In Arize Phoenix → **Integrations → Webhooks → Add Webhook**:
+
+| Field | Value |
+|---|---|
+| URL | `https://your-backend/api/webhook/arize` |
+| Event | **Span** |
+
+TraceGuard processes spans with `status: ERROR` or a non-empty `status_message`.
+
 ### Generic / custom (any tool)
 
 Send a POST to `/api/webhook/ingest` with your `X-API-Key` header:
@@ -243,11 +266,11 @@ curl -X POST https://your-backend/api/webhook/ingest \
     "name":   "my-agent",
     "error":  "Agent stopped due to iteration limit of 10.",
     "inputs": {"query": "what is the capital of France?"},
-    "source": "helicone"
+    "source": "custom"
   }'
 ```
 
-This works with Helicone, Arize, custom alerting scripts, or any tool that can fire an HTTP POST on failure.
+Works with any tool that can fire an HTTP POST on failure.
 
 ---
 
@@ -352,8 +375,11 @@ traceguard-ai/
 | `POST` | `/api/patches/{id}/approve` | Yes | Squash-merge PR, mark resolved |
 | `POST` | `/api/patches/{id}/reject` | Yes | Close PR, re-patch if notes provided |
 | `GET` | `/api/evals` | No | List all eval cases with scores |
+| `GET` | `/api/stats` | No | Failure counts, by-type, by-severity, 7-day trend |
 | `POST` | `/api/webhook/langsmith` | No | LangSmith webhook receiver |
 | `POST` | `/api/webhook/langfuse` | No | Langfuse webhook receiver |
+| `POST` | `/api/webhook/helicone` | No | Helicone webhook receiver |
+| `POST` | `/api/webhook/arize` | No | Arize Phoenix span receiver |
 | `POST` | `/api/webhook/ingest` | Yes | Generic intake (any tool) |
 | `POST` | `/api/webhook/simulate` | Yes | Inject a demo failure |
 | `WS` | `/ws` | No | Live event stream |
@@ -388,15 +414,37 @@ Valid `failure_hint` values: `infinite_loop`, `hallucination`, `tool_misuse`, `c
 
 ---
 
-## Groq Model Options
+## LLM Provider Options
 
-Set `GROQ_MODEL` in `backend/.env`:
+Set `LLM_PROVIDER` in `backend/.env` to switch providers. Only the key for the active provider is required.
+
+| Provider | `LLM_PROVIDER` | Key variable | Default model |
+|---|---|---|---|
+| Groq (default) | `groq` | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001` |
+
+Override the model with `GROQ_MODEL`, `OPENAI_MODEL`, or `ANTHROPIC_MODEL`.
+
+### Groq model options
 
 | Model | Speed | Best for |
 |---|---|---|
-| `llama-3.3-70b-versatile` | Fast | Default — best quality |
+| `llama-3.3-70b-versatile` | Fast | Default - best quality |
 | `llama3-8b-8192` | Fastest | High-volume / testing |
 | `llama-3.1-8b-instant` | Instant | Demo / low latency |
+
+---
+
+## Slack Notifications
+
+Set `SLACK_WEBHOOK_URL` in `backend/.env` to receive a message in Slack whenever TraceGuard opens a patch PR:
+
+```
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+TraceGuard posts: `TraceGuard AI opened PR #42 for infinite_loop - review and approve: <pr-url>`
 
 ---
 

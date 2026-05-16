@@ -2,10 +2,9 @@ import json
 import logging
 import re
 
-from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.config import settings
+from app.llm import get_llm
 from app.db.database import SessionLocal
 from app.models.eval_case import EvalCase
 from app.models.patch import Patch, PatchStatus
@@ -84,8 +83,7 @@ async def run_shadow_eval_async(eval_id: str):
 
         await broadcast({"event": "shadow_run_started", "eval_id": eval_id})
 
-        llm = ChatGroq(model=settings.groq_model, temperature=0,
-                       api_key=settings.groq_api_key)
+        llm = get_llm(temperature=0)
 
         raw_trace   = (failure.raw_trace or {}) if failure else {}
         task_input  = raw_trace.get("inputs") or ec.test_input or {}

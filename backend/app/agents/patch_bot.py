@@ -2,14 +2,31 @@ import json, logging, re, uuid
 from typing import TypedDict, Optional
 
 log = logging.getLogger(__name__)
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from langgraph.graph import StateGraph, END
-from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from app.config import settings
+from app.llm import get_llm
 from app.db.database import SessionLocal
 from app.models.failure import Failure, FailureStatus
 from app.models.patch import Patch, PatchStatus
 from app.api.ws import broadcast
+
+
+async def _notify_slack(pr_url: str, failure_type: str, pr_number: int | None):
+    if not settings.slack_webhook_url:
+        return
+    try:
+        import httpx
+        pr_ref = f"#{pr_number}" if pr_number else "draft"
+        text = (
+            f":shield: *TraceGuard AI* opened PR {pr_ref} for `{failure_type}`\n"
+            f"Review and approve: {pr_url}"
+        )
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(settings.slack_webhook_url, json={"text": text})
+    except Exception as e:
+        log.warning("Slack notification failed: %s", e)
 
 PLACEHOLDER_CODE = {
     "infinite_loop": 'def run_agent(q):\n    agent = create_react_agent(llm, tools)\n    # BUG: no max_iterations guard\n    return agent.invoke({"input": q})["output"]\n',
@@ -173,9 +190,16 @@ def _sanitize_json(raw: str) -> str:
     return "".join(out)
 
 
+@retry(stop=stop_after_attempt(3),
+       wait=wait_exponential(multiplier=1, min=2, max=10),
+       retry=retry_if_exception_type(Exception),
+       reraise=True)
+async def _invoke_llm(llm, messages):
+    return await llm.ainvoke(messages)
+
+
 async def generate_fix_node(state: PatchState) -> PatchState:
-    llm = ChatGroq(model=settings.groq_model, temperature=0.2,
-                   api_key=settings.groq_api_key)
+    llm = get_llm(temperature=0.2)
     sys_msg = """You are TraceGuard AI Patch Bot. Reply in EXACTLY this format — no JSON, no markdown fences:
 
 PATCH_TYPE: [prompt_rewrite|code_fix|guard_insertion]
@@ -207,8 +231,8 @@ Current code:
 {state.get('repo_code', '')}
 ```
 Generate minimal targeted fix."""
-    resp = await llm.ainvoke([SystemMessage(content=sys_msg),
-                               HumanMessage(content=human_msg)])
+    resp = await _invoke_llm(llm, [SystemMessage(content=sys_msg),
+                                   HumanMessage(content=human_msg)])
     fix = _parse_fix_response(resp.content)
     if fix:
         state.update({"patch_type":    fix.get("patch_type", "code_fix"),
@@ -330,6 +354,9 @@ async def run_patch_bot_async(failure_id: str, rejection_context: str = ""):
         db.refresh(patch)
         await broadcast({"event": "patch_generated", "failure_id": failure_id,
                          "patch_id": patch.id, "pr_url": patch.pr_url})
+        if patch.pr_url:
+            await _notify_slack(patch.pr_url, result.get("failure_type", "unknown"),
+                                patch.pr_number)
     except Exception as e:
         log.error("run_patch_bot_async FAILED for %s: %s", failure_id, e, exc_info=True)
         await broadcast({"event": "patch_error", "failure_id": failure_id, "error": str(e)})

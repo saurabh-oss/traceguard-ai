@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { getFailures, getPatches, getEvals, simulateFailure, wsUrl } from '../lib/api'
+import { getFailures, getPatches, getEvals, getStats, simulateFailure, wsUrl } from '../lib/api'
 
 const SEV_BADGE: Record<string, string> = {
   critical: 'bg-red-900 text-red-300 border border-red-700',
@@ -24,6 +24,29 @@ const PATCH_STATUS_STYLE: Record<string, string> = {
 }
 const DEMOS = ['infinite_loop', 'hallucination', 'tool_misuse', 'context_overflow', 'empty_response']
 
+function Sparkline({ data }: { data: { date: string; count: number }[] }) {
+  const max = Math.max(...data.map(d => d.count), 1)
+  const W = 480, H = 56, pad = 4
+  const barW = Math.floor((W - pad * (data.length + 1)) / data.length)
+  return (
+    <div className="flex items-end gap-1 overflow-x-auto">
+      {data.map((d, i) => {
+        const h = Math.max(Math.round((d.count / max) * H), d.count > 0 ? 4 : 2)
+        return (
+          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-[36px]">
+            <span className="text-xs text-teal-400">{d.count > 0 ? d.count : ''}</span>
+            <div
+              className={`w-full rounded-t transition-all ${d.count > 0 ? 'bg-teal-500/70' : 'bg-gray-800'}`}
+              style={{ height: `${h}px`, minHeight: '3px' }}
+            />
+            <span className="text-[10px] text-gray-600">{d.date}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const qc = useQueryClient()
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -36,6 +59,9 @@ export default function Dashboard() {
   })
   const { data: evals = [] } = useQuery({
     queryKey: ['evals'], queryFn: getEvals, refetchInterval: 4000,
+  })
+  const { data: stats } = useQuery({
+    queryKey: ['stats'], queryFn: getStats, refetchInterval: 10000,
   })
 
   useEffect(() => {
@@ -86,7 +112,11 @@ export default function Dashboard() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 col-span-2">
           <p className="text-xs text-gray-500 mb-1">Total Failures</p>
           <p className="text-3xl font-bold">{total}</p>
-          <p className="text-xs text-green-400 mt-1">{resolved} resolved</p>
+          <p className="text-xs text-green-400 mt-1">{resolved} resolved
+            {stats?.resolution_rate != null && (
+              <span className="text-gray-500 ml-1">({stats.resolution_rate}%)</span>
+            )}
+          </p>
         </div>
         {bySev.map(({ label, count }) => (
           <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -103,6 +133,14 @@ export default function Dashboard() {
           <p className="text-2xl font-bold text-teal-400">{patches.length}</p>
         </div>
       </div>
+
+      {/* Sparkline — 7-day failure trend */}
+      {stats?.daily && stats.daily.some((d: any) => d.count > 0) && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+          <p className="text-xs text-gray-500 mb-3">Failures — last 7 days</p>
+          <Sparkline data={stats.daily} />
+        </div>
+      )}
 
       {/* Failure list */}
       {isLoading ? (

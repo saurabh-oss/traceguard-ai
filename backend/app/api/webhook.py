@@ -140,6 +140,80 @@ async def langfuse_webhook(payload: dict, bg: BackgroundTasks, db: Session = Dep
     return {"status": "accepted", "failure_id": failure.id}
 
 
+@router.post("/helicone")
+async def helicone_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
+    """Helicone webhook receiver.
+
+    Helicone sends per-request events. We ingest only requests with a non-empty error field.
+    Expected shape: {"requestId": ..., "model": ..., "prompt": ...,
+                     "response": ..., "error": ..., "latency": ..., "properties": {}}
+    """
+    error_text = payload.get("error", "") or ""
+    status_code = payload.get("statusCode") or payload.get("status_code", 200)
+    if not error_text and int(status_code) < 400:
+        return {"status": "skipped", "reason": "no error in payload"}
+
+    run_id = payload.get("requestId") or payload.get("request_id")
+    if run_id:
+        existing = db.query(Failure).filter(Failure.run_id == run_id).first()
+        if existing:
+            return {"status": "duplicate", "failure_id": existing.id}
+
+    trace = {
+        "id":         run_id,
+        "name":       payload.get("model", "helicone-agent"),
+        "inputs":     {"prompt": payload.get("prompt", "")},
+        "outputs":    {"response": payload.get("response", "")},
+        "error":      error_text or f"HTTP {status_code}",
+        "child_runs": [],
+        "latency_ms": payload.get("latency"),
+    }
+    failure = Failure(raw_trace=trace, run_id=run_id, status=FailureStatus.new)
+    db.add(failure)
+    db.commit()
+    db.refresh(failure)
+    bg.add_task(process_trace, failure.id, trace)
+    return {"status": "accepted", "failure_id": failure.id, "source": "helicone"}
+
+
+@router.post("/arize")
+async def arize_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
+    """Arize Phoenix webhook receiver.
+
+    Arize Phoenix span format:
+    {"span_id": ..., "name": ..., "status": "ERROR", "status_message": ...,
+     "input": {"value": ...}, "output": {"value": ...}, "latency_ms": ...}
+    """
+    status = payload.get("status", "").upper()
+    status_message = payload.get("status_message") or payload.get("statusMessage", "")
+    if status not in ("ERROR", "UNSET") and not status_message:
+        return {"status": "skipped", "reason": "span has no error status"}
+
+    run_id = payload.get("span_id") or payload.get("spanId")
+    if run_id:
+        existing = db.query(Failure).filter(Failure.run_id == run_id).first()
+        if existing:
+            return {"status": "duplicate", "failure_id": existing.id}
+
+    inp = payload.get("input", {})
+    out = payload.get("output", {})
+    trace = {
+        "id":         run_id,
+        "name":       payload.get("name", "arize-span"),
+        "inputs":     inp if isinstance(inp, dict) else {"value": inp},
+        "outputs":    out if isinstance(out, dict) else {"value": out},
+        "error":      status_message or f"Span status: {status}",
+        "child_runs": [],
+        "latency_ms": payload.get("latency_ms"),
+    }
+    failure = Failure(raw_trace=trace, run_id=run_id, status=FailureStatus.new)
+    db.add(failure)
+    db.commit()
+    db.refresh(failure)
+    bg.add_task(process_trace, failure.id, trace)
+    return {"status": "accepted", "failure_id": failure.id, "source": "arize"}
+
+
 @router.post("/simulate")
 async def simulate_webhook(payload: dict, bg: BackgroundTasks, db: Session = Depends(get_db)):
     """Simulate a failure for demo/testing — injects a realistic trace."""

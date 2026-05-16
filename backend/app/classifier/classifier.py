@@ -1,7 +1,6 @@
 import json, re
-from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
-from app.config import settings
+from app.llm import get_llm
 
 TAXONOMY = {
     "infinite_loop":     "Agent/tool calling itself in a cycle with no exit condition",
@@ -40,8 +39,7 @@ def _trim(value, max_chars: int = 400) -> str:
 
 
 async def classify_trace_async(trace: dict) -> dict:
-    llm = ChatGroq(model=settings.groq_model, temperature=0,
-                   api_key=settings.groq_api_key)
+    llm = get_llm(temperature=0)
     # Keep the excerpt small — Groq free tier has a 12k TPM limit
     excerpt = {
         "run_id":     trace.get("id"),
